@@ -1,21 +1,30 @@
-# Qubika SQL Interview (plugin `qubika-livecoding`)
+# Qubika Data Analyst Interview Kit (plugin `qubika-livecoding`)
 
-Run **live SQL interviews** from your own laptop — no third-party product, no
-per-seat cost. One command starts a small local web app with 5 SQL exercises
-(statement + schemas + editor + Run button + results) on an embedded DuckDB
-engine, and exposes it through an **ephemeral public link** (a Cloudflare
-quick tunnel or localhost.run — both free, no account — whichever proves
-reachable first) that you paste in the Google Meet chat. The
-candidate shares their screen; your terminal shows every query they run,
-whether its result matches the reference answer, and short SQL style flags.
-**Stopping the process kills the link instantly**, and a JSONL log of the full
-session is saved for later review.
+A standardized kit for running **Data Analyst / Analytics Engineer
+interviews** the same way across the whole team — no third-party product, no
+per-seat cost, one shared process. It covers the full interviewer workflow:
+
+1. **Prep** the interview from the candidate's CV (and JD, if any).
+2. **Run** a live SQL exercise from your own laptop, behind an ephemeral
+   public link, with every query and its verdict streaming to your terminal.
+3. **Assess** the finished interview into a structured, template-driven
+   hiring recommendation, calibrated against Qubika's official DASRI/DASRII
+   seniority criteria and a set of judgment rules distilled from real
+   assessments.
+4. **Track** the candidate pipeline at a glance.
+
+Candidate data (CVs, transcripts, assessments) never lives in this repo —
+see [Where your candidate data lives](#where-your-candidate-data-lives).
 
 ## Components
 
 | Component | Purpose |
 | --- | --- |
-| Skill: `run-DA-livecoding` | Preflight + hands you the one-line command to start an interview in your terminal; also lists exercises, shows solutions, reads session logs, helps add exercises and troubleshoot. Invoke it as `/qubika-livecoding:run-DA-livecoding` or in natural language. The full app ships inside the skill (`skills/run-DA-livecoding/app/`). |
+| Skill: `run-DA-livecoding` | Preflight + hands you the one-line command to start a live SQL interview in your terminal; also lists exercises, shows solutions, reads session logs, helps add exercises and troubleshoot. Invoke it as `/qubika-livecoding:run-DA-livecoding` or in natural language. The full app ships inside the skill (`skills/run-DA-livecoding/app/`). |
+| Skill: `prepare-DA-interview` | Pre-call prep from the candidate's CV and JD: trajectory analysis, CV-vs-JD contrast, what to focus on, per-category questions. Invoke as `/qubika-livecoding:prepare-DA-interview` or "prep the interview for candidate X". |
+| Skill: `assess-DA-interview` | Post-call structured assessment from the interview transcript, following `standards/interview_template.md` and the judgment rules in `standards/assessment-lessons.md`. Invoke as `/qubika-livecoding:assess-DA-interview` or "process the interview for candidate X". |
+| Skill: `candidate-status` | Scans your interview workspace and reports each candidate's stage, artifacts, and recorded verdict. Invoke as `/qubika-livecoding:candidate-status` or "what's the status of my candidates". |
+| `standards/` | The team's shared source of truth: the assessment template, the DASRI/DASRII role definitions, and the accumulated judgment rules. Skills read this; it isn't duplicated per-skill. |
 
 ## Install (as a Claude Code plugin)
 
@@ -45,6 +54,23 @@ equivalent and fully supported:
 
 Restart the Claude Code session afterwards — plugins load at startup. Verify
 with `/qubika-livecoding:run-DA-livecoding` or by asking "list the SQL exercises".
+
+## Where your candidate data lives
+
+This repo is shared across the team, so it never stores candidate data — no
+CVs, transcripts, assessments, prep docs, or session logs, in any commit.
+Each interviewer keeps their own workspace, outside the plugin:
+
+- **Interview prep/assessment workspace**: `$DA_INTERVIEWS_DIR` if set, else
+  `~/qubika-da-interviews/`, with each candidate in
+  `Candidates/<Candidate Name>/`. The `prepare-DA-interview`,
+  `assess-DA-interview`, and `candidate-status` skills read and write there.
+- **SQL livecoding session logs**: `$DATA_ANALYTICS_LIVECODING_DATA_DIR` if
+  set, else `~/qubika-sql-interviews/sessions/`. The `run-DA-livecoding`
+  skill writes there.
+
+Nothing needs to be created manually — the skills create the folders they
+need on first use.
 
 ## Setup (one time)
 
@@ -81,6 +107,33 @@ Other things to ask Claude, any time:
   the result verdict and style flags per run).
 - **"Add an exercise about window functions"** — scaffolds it in the right
   format.
+
+## Usage — prep, assessment, and pipeline status
+
+These three skills don't need a terminal window kept open; ask Claude
+directly, any time:
+
+- **`/qubika-livecoding:prepare-DA-interview`** or *"prep the interview for
+  candidate X"* — before the call. Reads the candidate's CV (and JD, if
+  given) from your workspace and writes
+  `Candidates/<Name>/FirstnameLastname_InterviewPrep.md`: trajectory
+  analysis, CV-vs-JD contrast, what to focus on, and per-category questions.
+- **`/qubika-livecoding:assess-DA-interview`** or *"process the interview for
+  candidate X"* — after the call. Asks the three mandatory questions (your
+  live SQL verdict, the client/project fit, the JD link), then drafts
+  `Candidates/<Name>/FirstnameLastname_Assessment.md` against
+  `standards/interview_template.md`, calibrated with
+  `standards/assessment-lessons.md` and the DASRI/DASRII definitions in
+  `standards/roles/`. Runs a self-check pass (brevity, style, category
+  coverage, verdict/seniority coherence) after the first draft and every
+  edit.
+- **`/qubika-livecoding:candidate-status`** or *"what's the status of my
+  candidates"* — scans your workspace and reports each candidate's stage
+  (needs prep, awaiting call, needs assessment, done) with the recorded
+  verdict and any gaps.
+
+See [Where your candidate data lives](#where-your-candidate-data-lives) for
+where these skills read and write.
 
 ## Commands
 
