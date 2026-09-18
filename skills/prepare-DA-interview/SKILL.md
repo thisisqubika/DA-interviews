@@ -14,7 +14,7 @@ description: >
   finished interview into a post-call assessment, or to run
   the live SQL livecoding app (use run-DA-livecoding).
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Interview Prep (Workflow A)
@@ -163,39 +163,83 @@ Those are sources only.
    semantic governance, advising business or data leadership. Strong
    individual technical depth alone does not reach DASRII. Frame all of this
    as **where the evidence points and what is missing to confirm it**, never
-   as a verdict. There is no transcript yet.
-7. **Write the gap questions, grouped by gap.** Not by assessment category:
-   the interviewer is going in to close specific gaps, so the grouping
-   follows the gaps. Each question must test the underlying concept even
-   when the candidate lacks the named tool (incremental strategies without
-   dbt vocabulary, dialect migration without Snowflake, macros as "how did
-   you reuse SQL logic"). Add one line per question on what a strong vs a
-   weak answer sounds like. When a tool gap looks bridgeable, include one
-   "what have you read or tried about X since you saw this description"
-   question, which tests the learning-velocity claim directly. When the
-   candidate has done an analogous thing (migrated SQL Server to Spark SQL,
-   say), build the question on that so the transferable skill can show.
+   as a verdict. There is no transcript yet. **One paragraph, no
+   more:** which level the evidence points at and why, and which dimensions
+   are unknown rather than absent, pointing at the questions that close them.
+   The dimension-by-dimension walkthrough belongs in your reasoning, not in
+   the file.
+7. **Write the gap questions, grouped by gap, inside the time budget.**
+   Grouping follows the gaps, not assessment categories: the interviewer is
+   going in to close specific gaps.
+
+   **The budget is real.** There are roughly **40 minutes of technical time**
+   in the call and the two scenarios eat about 15 of them. So: pick **at most
+   three gaps**, the ones whose answer would change the hire decision, and
+   write **at most eight questions in total** across them, the two standing
+   questions below included. Probing every gap is not the goal and does not
+   fit. A gap that is real but would not change the decision is named once in
+   the fit read and gets no questions. Order the gaps so the interviewer can
+   stop at any point and have spent the time on the most decisive thing.
+
+   **Two standing questions, always among the eight:**
+   - **The failure question:** a change you shipped produced wrong numbers,
+     how was it caught, what happened in the first hour, what changed
+     afterwards.
+   - **Documentation others actually used**, and how they know it was used.
+
+   Each question must test the underlying concept even when the candidate
+   lacks the named tool (incremental strategies without dbt vocabulary,
+   dialect migration without Snowflake, macros as "how did you reuse SQL
+   logic"). Give each question **one short line, about 20 words, on what you
+   are listening for**: the single behaviour or piece of evidence that would
+   move the decision. Not a model answer, and not a strong-versus-weak pair.
+   The interviewer needs a cue they can hold in their head while someone is
+   talking, not a rubric to read. When a tool gap looks bridgeable, one of the
+   eight can be
+   "what have you read or tried about X since you saw this description",
+   which tests the learning-velocity claim directly. When the candidate has
+   done an analogous thing (migrated SQL Server to Spark SQL, say), build the
+   question on that so the transferable skill can show.
 8. **Design the two scenarios** (rules below).
-9. **Write the logistics and risk flags** (rules below).
-10. **List what is still unresolved** and needs a decision or confirmation
-    from the interviewer before the call: which JD to interview against,
-    ambiguous JD details, whether a stated requirement is a hard filter,
-    a missing document that would change the read.
-11. **Deliver** per the output rules above, and close with a note that this
+9. **Check the logistics and risk flags** (rules below). They do not go in
+   the file.
+10. **Deliver** per the output rules above, and close with a note that this
     is a prep guide only, and that the post-call assessment must be built
-    from the interview transcript, not from this document.
+    from the interview transcript, not from this document. If something
+    genuinely needs the interviewer's decision before the call (which JD to
+    interview against, whether a stated requirement is a hard filter, a
+    missing document that would change the read), say it **in chat, in a line
+    or two**. It does not go in the file: the file is what gets read minutes
+    before the call, and a list of open questions is not usable then.
 
 ## Scenario rules
 
 - Exactly two: **easy** and **hard**. Easy tests the core daily task of the
   role, the bulk of the first months. Hard tests the part the JD calls most
   valuable or most ambiguous, usually stakeholder-facing or definitional.
-- Each must be statable out loud in under a minute with no screen. Give the
-  exact script in quotes.
-- For each scenario include: **Script**, **Why it matters** (tied to a
-  specific JD line), **Strong answer**, **Weak answer**, **What to expect
-  from this candidate** given their background, and one **Follow-up** if
-  they do well.
+- **Never name the client, the program, or the ticket in a script.** The
+  script is the one part of this file that gets read out loud to the
+  candidate, who has signed nothing and may not be told which account is in
+  play at all. Anonymize to a generic descriptor that keeps the shape of the
+  work and gives away nothing: "a manufacturing plant that runs 24/7", "a
+  nonprofit running several social programs", "an international retail
+  client". The same goes for a client's internal system names, sites and
+  product names. Everything outside the quoted scripts is written for the
+  interviewer and names the client normally.
+- **Keep the scripts short.** **About 40 spoken words**, two or three
+  sentences, read out loud in twenty seconds with no screen. Give the exact
+  script in quotes. Detail that is not a clue is padding: cut the backstory
+  and keep only the numbers that create the problem and the person who is
+  waiting. Anything the interviewer would only say if asked stays out of the
+  script and goes in **Watch for** as a follow-up.
+- **Two fields only: Script and Watch for.** No model answers. Written-out
+  strong and weak answers are the longest part of a scenario and the least
+  used part: the interviewer is listening to a person, not comparing against
+  a paragraph. **Watch for** is two or three short bullets, each naming a
+  behaviour that separates a good answer from a poor one, and it carries the
+  one thing in *this* candidate's background that makes their answer
+  informative plus the follow-up to use if they do well. Do not explain why
+  the scenario matters: the interviewer has read the JD.
 - Build clues into the scenario (the shape of the error, who is waiting,
   what already matches) so a strong candidate can reason from them and a
   weak one has to guess. A good scenario also rewards asking clarifying
@@ -204,13 +248,21 @@ Those are sources only.
   disagreeing) so communication can be scored, not just the technical path.
   If the candidate never addresses that person, tell the interviewer to ask
   "and what does she hear from you today?" and score that separately.
+- **With two openings, write both scenarios for the better fit only.** If the
+  other opening would need a different hard scenario, give its alternative
+  script in one line and stop there.
 
 ## Logistics and risk flags
 
-These kill hires late, so they are a standing section, not an afterthought:
+These kill hires late, so they are always checked, but **they are not a
+section of the file.** They are not interview material: the interviewer
+cannot act on them during the call, and they push the questions and scenarios
+further down a document that gets read in the last five minutes before
+dialing in. Check all of these, and mention in **chat, in at most two
+lines**, only what is actually live. If everything is fine, say nothing.
 
 - Start date against notice period and planned time off, checked against the
-  role's heaviest period.
+  role's heaviest period. Convert to real calendar dates.
 - Contract type or structure expectations against what Qubika can actually
   offer in the candidate's country.
 - Stated English level against how stakeholder-facing the role really is.
@@ -218,17 +270,22 @@ These kill hires late, so they are a standing section, not an afterthought:
   streams, interruptions, ambiguity).
 - Motivation for change against the actual stack of the opening.
 
-Then, in the same section: the best STAR story available in the documents
-and how to push on it, what to emphasize in the live SQL test given this JD,
-and 4 to 6 additional questions. Always include one **failure question** ("a
-change you shipped produced wrong numbers: how was it caught, what happened
-in the first hour, what changed afterwards") and one about **documentation
-others actually used**.
+Nothing else. No STAR-story walkthrough, no "what to emphasize in the live
+SQL test", no list of extra questions: the live SQL exercise is standard and
+the interviewer already knows how to run it, and the question budget is fixed
+in step 7.
 
 ## Output structure
 
 Same order whether it lands in a file or in chat. Bold headings, tight
-bullets.
+bullets. The whole file should be readable in five minutes immediately
+before the call.
+
+**Where the weight goes.** Sections 2, 3 and 4 are the deliverable: the fit
+read, what the documents actually support, and the must-have coverage are
+what the interviewer thinks with. Section 5 is short. Sections 6 and 7 are
+the plan for the hour. Anything that is neither the read nor the plan does
+not belong in the file.
 
 1. Title line: `Pre-interview prep: <Candidate> vs <Role> (<program or client if known>)`
 2. **Overall.** 2 to 3 short paragraphs, fit read first, leading with any
@@ -240,15 +297,16 @@ bullets.
 4. **Must-have coverage.** Table, `Must-have | What the documents show | Status`.
    One row per must-have, none skipped. With several JDs, a column each,
    plus the call on which fits better.
-5. **Seniority pre-read.** Where the evidence points against DASRI/DASRII,
-   and what is missing to confirm it. Framed as what to probe.
-6. **Questions to probe the gaps.** Grouped by gap, numbered, each with its
-   strong vs weak line.
-7. **Scenarios.** Scenario 1 (easy) and Scenario 2 (hard), each with
-   Script, Why it matters, Strong answer, Weak answer, What to expect from
-   this candidate, Follow-up.
-8. **Logistics and risks**, then **More questions worth asking**.
-9. **Unresolved, needs your decision.**
+5. **Seniority pre-read.** Where the evidence points against DASRI/DASRII
+   and what is missing to confirm it, framed as what to probe. One
+   paragraph.
+6. **Questions to probe the gaps.** At most three gaps, at most eight
+   questions in total, numbered, each with one short line on what you are
+   listening for.
+7. **Scenarios.** Scenario 1 (easy) and Scenario 2 (hard), four fields each.
+
+Nothing after that: no logistics section, no unresolved-questions section, no
+appendix, no restatement of the JD.
 
 ## Content rules
 
@@ -269,6 +327,12 @@ missing. Assertive and action-oriented beats hedged.
 
 **Short over long.** No padding. Cutting length means dropping redundant
 examples, never dropping the concrete evidence that makes a line verifiable.
+
+**The length budget is a hard constraint, not a preference.** Sections 6 and
+7 are the plan for 40 minutes of technical time and have to fit in it. A prep containing more material than the call can use is wrong,
+not thorough: it pushes the decisive question out of reach by burying it.
+When cutting, drop whole items rather than trimming every line. Three sharp
+questions beat eight hedged ones.
 
 **Never use em dashes or double hyphens** anywhere in the deliverable. Use
 commas, colons, semicolons or periods.
