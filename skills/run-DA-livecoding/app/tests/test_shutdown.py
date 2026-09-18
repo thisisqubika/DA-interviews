@@ -32,7 +32,8 @@ class TestCleanShutdown(unittest.TestCase):
         data_dir = tempfile.mkdtemp(prefix="qsi_shutdown_")
         env = dict(os.environ, DATA_ANALYTICS_LIVECODING_DATA_DIR=data_dir)
         proc = subprocess.Popen(
-            [sys.executable, SERVE, "--no-tunnel", "--port", str(port)],
+            [sys.executable, SERVE, "--no-tunnel", "--port", str(port),
+             "--candidate", "Ana Test"],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
             start_new_session=True)  # detached, like a background job
         try:
@@ -85,7 +86,8 @@ class TestShutdownWithQueryInFlight(unittest.TestCase):
         data_dir = tempfile.mkdtemp(prefix="qsi_inflight_")
         env = dict(os.environ, DATA_ANALYTICS_LIVECODING_DATA_DIR=data_dir)
         proc = subprocess.Popen(
-            [sys.executable, SERVE, "--no-tunnel", "--port", str(port)],
+            [sys.executable, SERVE, "--no-tunnel", "--port", str(port),
+             "--candidate", "Ana Test"],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
             start_new_session=True)
         try:
@@ -197,7 +199,7 @@ class TestShutdownDuringStartup(unittest.TestCase):
                    PATH=stub_dir + os.pathsep + os.environ["PATH"],
                    DATA_ANALYTICS_LIVECODING_DATA_DIR=data_dir)
         proc = subprocess.Popen(
-            [sys.executable, SERVE, "--port", "8995"],
+            [sys.executable, SERVE, "--port", "8995", "--candidate", "Ana Test"],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
             start_new_session=True)
         try:

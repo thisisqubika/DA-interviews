@@ -1,10 +1,18 @@
 {
   "name": "qubika-livecoding",
-  "version": "0.6.0",
-  "description": "Data Analyst interview kit: live SQL livecoding from your own terminal (embedded DuckDB, ephemeral public link, Ctrl+C kills it), plus pre-call interview prep from recruiter notes or a CV against the opening, with a must-have coverage table, scenarios and a DASRI/DASRII seniority pre-read.",
+  "version": "0.7.0",
+  "description": "Standardized Data Analyst interview kit: live SQL exercises (embedded DuckDB, ephemeral public link, Ctrl+C kills it), pre-call CV and screening-notes prep, and a post-call assessment written from the transcript and the live SQL log against a shared template and DASRI/DASRII criteria. One plugin, one process, for every interviewer.",
   "author": {
     "name": "Qubika Data Studio"
   },
-  "keywords": ["sql", "interview", "livecoding", "duckdb", "hiring", "qubika"],
+  "keywords": [
+    "sql",
+    "interview",
+    "livecoding",
+    "duckdb",
+    "hiring",
+    "assessment",
+    "qubika"
+  ],
   "license": "Internal — Qubika"
 }

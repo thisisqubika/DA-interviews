@@ -17,7 +17,8 @@ session is saved for later review.
 | --- | --- |
 | Skill: `run-DA-livecoding` | Preflight + hands you the one-line command to start an interview in your terminal; also lists exercises, shows solutions, reads session logs, helps add exercises and troubleshoot. Invoke it as `/qubika-livecoding:run-DA-livecoding` or in natural language. The full app ships inside the skill (`skills/run-DA-livecoding/app/`). |
 | Skill: `prepare-DA-interview` | Pre-call prep from recruiter screening notes and/or a CV, against one or more job descriptions (pasted, or Jira tickets): must-have coverage table, gap questions, two ready-to-run interview scenarios, logistics and risk flags, and a DASRI/DASRII seniority pre-read. Invoke as `/qubika-livecoding:prepare-DA-interview` or "prep the interview for candidate X". |
-| `standards/roles/` | The DASRI / DASRII career-path definitions the prep skill checks evidence against. |
+| Skill: `assess-DA-interview` | Post-call write-up from the interview transcript (a Tactiq link, a Google Doc, a local file) plus the live SQL session log: verdict, DASRI/DASRII seniority, client fit per opening, and eleven evidence-backed categories against the shared template. Invoke as `/qubika-livecoding:assess-DA-interview` or "process the interview for candidate X". |
+| `standards/` | The team's shared source of truth for what a good assessment looks like: `interview_template.md` (the canonical structure), `assessment-lessons.md` (judgment rules distilled from real assessments), and `roles/` (the DASRI / DASRII career-path definitions both skills check evidence against). |
 | `workspace-template/` | Empty skeleton for your own interview workspace. Candidate files never live in this repo. |
 
 ## Install (as a Claude Code plugin)
@@ -107,7 +108,7 @@ interview** and kills the link.
 
 | Option | Effect |
 | --- | --- |
-| `--candidate "Full Name"` | Puts the name in the log, the banner, the farewell and the session folder name. Optional, but you will want it. |
+| `--candidate "Full Name"` | **Required.** Names the candidate folder the session log is written to, and appears in the log, the banner and the farewell. Leave it out and it asks at the prompt. |
 | `--exercise exercise_01,exercise_03` | Serve a subset. Default: all five. |
 | `--tunnel cloudflare` / `--tunnel localhost.run` | Force one link provider. Default: start both and keep the first one that proves reachable. |
 | `--no-tunnel` | Localhost only, no public link. The fallback when no provider works: share your own screen and the candidate dictates the SQL. |
@@ -137,11 +138,17 @@ python3 "<install-dir>/skills/run-DA-livecoding/app/serve.py" --list
 The banner repeats this legend. Both columns are for you only; the candidate
 never sees them.
 
-**Afterwards.** Each session is one folder under
-`~/qubika-sql-interviews/sessions/<timestamp>_<candidate-slug>/` (just
-`<timestamp>/` when no name was given, and never inside the plugin), holding a
-`session.jsonl` with every query, its verdict and reason, its style flags, and
-the final text of each editor.
+**Afterwards.** Each session is one folder in the candidate's own workspace
+folder as
+`<workspace>/Candidates/<Candidate Name>/<FirstnameLastname>_SQL_<timestamp>.jsonl`
+(never inside the plugin), with every query, its verdict and reason, its
+style flags, and the final text of each editor. It sits beside that
+candidate's prep doc, transcript and assessment, and sorts with them. That
+puts the SQL log next to the CV, the transcript and the assessment for the
+same person, which is where `assess-DA-interview` reads it from. Setting
+`DATA_ANALYTICS_LIVECODING_DATA_DIR` opts back into the old flat layout,
+`<that dir>/sessions/<timestamp>_<candidate-slug>/`, at the cost of that
+link.
 
 ## Interview prep (`prepare-DA-interview`)
 
@@ -170,6 +177,27 @@ cp -R workspace-template ~/qubika-da-interviews
 
 See `workspace-template/README.md` for the per-candidate layout. In a chat
 client with no filesystem, the prep is delivered inline instead.
+
+## Interview assessment (`assess-DA-interview`)
+
+After the call, ask *"process the interview for candidate X"* (or run
+`/qubika-livecoding:assess-DA-interview`) and give it the transcript: a Tactiq
+link, a Google Doc link, or a local file. It reads only the source you name,
+never going looking for the recording elsewhere, and it reads the SQL session
+log from the candidate's folder so the SQL judgment rests on the queries that
+actually ran rather than on what anyone remembers. Then it asks the handful of
+things it cannot know — your own read of the live exercise, which openings are
+in play and what they are for, whether there is a Jira JD — and drafts against
+`standards/interview_template.md`.
+
+You get the verdict, a DASRI/DASRII seniority read checked against the
+career-path definitions, fit judged per opening (a Yes overall is not a yes
+for every seat), and eleven categories each carrying evidence from the call or
+an explicit "not covered". It lands as
+`Candidates/<Name>/FirstnameLastname_Assessment.md` in your workspace and is
+printed in chat as well, so you can correct it in place. Corrections that
+would recur on the next candidate get logged to
+`standards/assessment-lessons.md` rather than lost.
 
 ## Security model (short version)
 

@@ -2,8 +2,7 @@
 """Qubika SQL Interview — local livecoding SQL server for interviews.
 
 Usage:
-    python3 serve.py                          # all exercises, with tunnel
-    python3 serve.py --candidate "Full Name"  # name it in the log and folder
+    python3 serve.py --candidate "Full Name"  # required: names the log folder
     python3 serve.py --exercise exercise_01,exercise_02
     python3 serve.py --tunnel localhost.run   # skip Cloudflare
     python3 serve.py --no-tunnel              # localhost only (testing)
@@ -12,6 +11,10 @@ Usage:
 Flow: starts the server + a Cloudflare quick tunnel, prints the candidate
 link to paste in the Meet chat, and shows every executed query live.
 Ctrl+C ends the session and kills the link instantly.
+
+The candidate's name is required because it names the workspace folder the
+session log is written to (--candidate, or the prompt); assess-DA-interview
+reads that log from there afterwards.
 """
 import argparse
 import errno
@@ -28,30 +31,47 @@ import checker
 from engine import DuckDBEngine, EngineError
 from exercises import ExerciseError, list_exercise_names, load_exercise, load_exercises, table_samples
 from server import Layout, build_server
-from session import Session, slugify
+from session import Session, compact_name, safe_dirname, slugify
 from tunnel import (DEFAULT_PROVIDERS, PROVIDERS, TunnelCancelled, TunnelError,
                     start_tunnel)
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def _default_data_dir():
-    """Where session logs go when the env var isn't set.
+def _workspace_dir():
+    """The interviewer's own interview workspace — never the install dir.
 
-    In the dev checkout that's <workspace>/data/data_analytics_livecoding.
-    Anywhere else (e.g. installed as a plugin) logs must NOT land inside the
-    install directory, so they go to ~/qubika-sql-interviews — which also
-    means the run command needs no environment variable.
+    Same resolution every skill in this kit uses, so the SQL log lands next to
+    the CV, the transcript and the assessment for the same candidate.
     """
-    workspace = os.path.dirname(os.path.dirname(PROJECT_DIR))
-    if os.path.isdir(os.path.join(workspace, "data")):
-        return os.path.join(workspace, "data", "data_analytics_livecoding")
-    return os.path.join(os.path.expanduser("~"), "qubika-sql-interviews")
+    return os.environ.get("DA_INTERVIEWS_DIR") or os.path.join(
+        os.path.expanduser("~"), "qubika-da-interviews")
 
 
-DATA_DIR = os.environ.get("DATA_ANALYTICS_LIVECODING_DATA_DIR",
-                          _default_data_dir())
-SESSIONS_DIR = os.path.join(DATA_DIR, "sessions")
+# Set this only to keep the old flat layout (one sessions/ tree for everyone,
+# no candidate folders). Unset — the normal case — every session logs into the
+# candidate's own folder in the workspace, which is where assess-DA-interview
+# looks for it.
+LEGACY_DATA_DIR = os.environ.get("DATA_ANALYTICS_LIVECODING_DATA_DIR")
+
+
+def log_path_for(candidate, stamp):
+    """Where this session's log is written. Candidate is always known here.
+
+    Normally straight into the candidate's own folder as
+    FirstnameLastname_SQL_<stamp>.jsonl, so it sits beside their prep doc,
+    transcript and assessment and sorts with them. The stamp keeps a retake
+    from overwriting the first attempt.
+    """
+    if LEGACY_DATA_DIR:
+        # Timestamp first, name second: folders still sort chronologically.
+        slug = slugify(candidate)
+        return os.path.join(LEGACY_DATA_DIR, "sessions",
+                            f"{stamp}_{slug}" if slug else stamp, "session.jsonl")
+    return os.path.join(_workspace_dir(), "Candidates", safe_dirname(candidate),
+                        f"{compact_name(candidate)}_SQL_{stamp}.jsonl")
+
+
 STATIC_DIR = os.path.join(PROJECT_DIR, "static")
 EXERCISES_DIR = os.path.join(PROJECT_DIR, "exercises")
 
@@ -65,8 +85,10 @@ def main():
         description="Local livecoding SQL server for interviews.")
     parser.add_argument("--exercise", help="comma-separated list (default: all)")
     parser.add_argument("--candidate", metavar='"Full Name"',
-                        help="candidate's name: stored in the session log, shown "
-                             "in the banner, appended to the session folder name")
+                        help="REQUIRED. Candidate's full name: names the "
+                             "workspace folder the session log is written to, "
+                             "and appears in the log, banner and farewell. "
+                             "Asked for interactively if omitted")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--ttl", type=int, default=DEFAULT_TTL_MIN,
                         help=f"session lifetime in minutes (default {DEFAULT_TTL_MIN})")
@@ -99,19 +121,21 @@ def main():
         print("ERROR: no exercises to serve.", file=sys.stderr)
         return 1
 
-    candidate = _clean_candidate(parser, args.candidate)
+    try:
+        candidate = _resolve_candidate(args.candidate)
+    except _MissingCandidate as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 1
     stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    # Timestamp first, name second: session folders still sort chronologically.
-    slug = slugify(candidate) if candidate else ""
-    session_dir = os.path.join(SESSIONS_DIR, f"{stamp}_{slug}" if slug else stamp)
-    session = Session([e.name for e in exercises], args.ttl, session_dir,
+    log_path = log_path_for(candidate, stamp)
+    session = Session([e.name for e in exercises], args.ttl, log_path,
                       candidate=candidate)
     # Armed before anything can block: startup (seeding, the tunnel wait) is
     # long enough that a Ctrl+C there would otherwise escape as a traceback
     # and leave cloudflared and temp databases behind.
     _install_signal_handlers(session)
 
-    eng = DuckDBEngine(exercises, session_dir)
+    eng = DuckDBEngine(exercises, os.path.dirname(log_path))
     try:
         eng.prepare()
     except EngineError as e:
@@ -227,14 +251,43 @@ def main():
     return 0
 
 
-def _clean_candidate(parser, raw):
+class _MissingCandidate(Exception):
+    """No candidate name, and no terminal to ask for one on."""
+
+
+def _clean_candidate(raw):
     """Sanitize an interviewer-typed name before it reaches the log or a path."""
-    if raw is None:
-        return None
-    name = " ".join("".join(c for c in raw if c.isprintable()).split())
-    if not name:
-        parser.error("--candidate must not be empty")
+    name = " ".join("".join(c for c in (raw or "") if c.isprintable()).split())
     return name[:MAX_CANDIDATE_CHARS]
+
+
+def _resolve_candidate(raw, prompts=3):
+    """The candidate's name, asked for at the prompt when the flag is missing.
+
+    The name is mandatory because it decides which candidate folder the
+    session log is written to: an unnamed log is one nobody can match to an
+    interview afterwards. Nothing has started yet at this point, so bailing
+    out here costs the interviewer only a retyped command.
+    """
+    name = _clean_candidate(raw)
+    if name:
+        return name
+    if raw is not None:
+        raise _MissingCandidate("--candidate must not be empty.")
+    if not sys.stdin.isatty():
+        raise _MissingCandidate(
+            "--candidate is required. Re-run with --candidate \"Full Name\".")
+    for _ in range(prompts):
+        try:
+            name = _clean_candidate(input("Candidate's full name: "))
+        except (EOFError, KeyboardInterrupt):
+            break
+        if name:
+            return name
+        print("  A name is required — it decides which candidate folder "
+              "this session's log goes in.", file=sys.stderr)
+    raise _MissingCandidate(
+        "no candidate name given. Re-run with --candidate \"Full Name\".")
 
 
 def _say(message):
@@ -286,7 +339,7 @@ def _print_banner(candidate_url, exercises, session, args, port, tunnel,
     tail = f"{n} exercise{'' if n == 1 else 's'} · ready"
     # A long name would otherwise push the title past the rule beneath it.
     room = len(dline) - len("  QUBIKA SQL INTERVIEW ·  · ") - len(tail)
-    who = f"{_ellipsis(session.candidate, room)} · " if session.candidate else ""
+    who = f"{_ellipsis(session.candidate, room)} · "
     print()
     print(dline)
     print(f"  QUBIKA SQL INTERVIEW · {who}{tail}")
@@ -320,8 +373,7 @@ def _print_banner(candidate_url, exercises, session, args, port, tunnel,
     print()
     print(line)
     print("  Keep this window open — closing it ends the interview.")
-    if session.candidate:
-        print(f"  Candidate  {session.candidate}")
+    print(f"  Candidate  {session.candidate}")
     print(f"  Answers    {os.path.join(EXERCISES_DIR, '<exercise>', 'solution.sql')}")
     print(f"  Checks     {_checks_line(exercises, checks_off, checks_degraded)}")
     print(f"  Log        {session.log_path}")
@@ -368,7 +420,7 @@ def _print_farewell(reason, session, layout):
            "terminated": "the process was stopped",
            "window_closed": "the terminal window was closed"}.get(reason, reason)
     ran = len(session.runs)
-    who = f"\n  Candidate: {session.candidate}" if session.candidate else ""
+    who = f"\n  Candidate: {session.candidate}"
     dline = layout.rule("═")
     _say("\n" + dline
          + f"\n  SESSION ENDED — {why}. The link is dead."

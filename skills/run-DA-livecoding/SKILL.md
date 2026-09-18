@@ -47,8 +47,11 @@ instructions, so you do not need to repeat them at length.
    Fix these before handing over the command; a failure mid-interview is
    much worse than a 30-second check now.
 3. Ask for the candidate's full name if they have not already given it — one
-   short question. It goes in the log and the session folder name, which makes
-   the log easy to find later. If they would rather not, drop the flag.
+   short question. It is **required**: it names the workspace folder the
+   session log is written to, which is what lets `assess-DA-interview` find
+   that log afterwards. Without it the app refuses to start (it asks at the
+   prompt when the flag is missing, and exits if it gets no answer), so get
+   the name before handing the command over.
 4. Give the user this command in a `bash` code block, with `APP` already
    expanded to the real absolute path — one command, nothing else in the
    block, so it is one click to run:
@@ -57,8 +60,8 @@ instructions, so you do not need to repeat them at length.
    python3 "<APP>/serve.py" --candidate "<Full Name>"
    ```
 
-   Omit `--candidate` when there is no name. Tell them to run it **in their own
-   terminal**. Optional flags, mention only if relevant: `--exercise
+   `--candidate` is the one flag that is not optional. Tell them to run it
+   **in their own terminal**. Optional flags, mention only if relevant: `--exercise
    exercise_01,exercise_02` (subset), `--ttl <minutes>` (default 180), `--port
    <port>` (default 8765), `--tunnel cloudflare` or `--tunnel localhost.run`
    (force one provider), `--no-tunnel` (localhost only, candidate cannot
@@ -91,9 +94,16 @@ instructions, so you do not need to repeat them at length.
      can judge, and names any exercise that is off or degraded.
 
    Both are interviewer-only and never reach the candidate. The banner carries
-   the same legend. Session logs go to
-   `~/qubika-sql-interviews/sessions/<timestamp>_<candidate-slug>/` (unless
-   `DATA_ANALYTICS_LIVECODING_DATA_DIR` says otherwise).
+   the same legend. The session log goes to the candidate's own folder in the
+   interviewer's workspace:
+   `<workspace>/Candidates/<Candidate Name>/<FirstnameLastname>_SQL_<timestamp>.jsonl`,
+   where `<workspace>` is `$DA_INTERVIEWS_DIR` if set, else
+   `~/qubika-da-interviews/`. That puts the SQL log next to the CV, the
+   transcript and the assessment for the same person, which is where
+   `assess-DA-interview` reads it from. Setting
+   `DATA_ANALYTICS_LIVECODING_DATA_DIR` opts back into the old flat layout
+   (`<that dir>/sessions/<timestamp>_<candidate-slug>/`), at the cost of that
+   link.
 
 ## End an interview
 
@@ -120,11 +130,15 @@ kill -INT <PID>
 ## During an interview
 
 - **"What has the candidate run?"** — the live feed is in their terminal. If
-  they want it here, read the newest session log:
-  `~/qubika-sql-interviews/sessions/<newest>/session.jsonl` (one JSON line per
-  query: SQL, status, rows, duration, the `check` verdict with its reason and
-  the `style` flags with full messages; plus each exercise's final editor
-  text). The `session_start` line carries the candidate's name.
+  they want it here, read the session log, which is appended live:
+  `<workspace>/Candidates/<Candidate Name>/<FirstnameLastname>_SQL_<newest>.jsonl`
+  (one JSON line per query: SQL, status, rows, duration, the `check` verdict
+  with its reason and the `style` flags with full messages; plus each
+  exercise's final editor text). The `session_start` line carries the
+  candidate's name. Read the JSONL, never the console feed — the console
+  truncates each query at about 100 characters, cutting off exactly the join
+  conditions and `GROUP BY`/`HAVING` clauses that decide whether an answer
+  was right.
 - **"Is my answer right?"** — the result column already answers that per run;
   for nuance, compare against the reference solution (below).
 - Never open or interact with the candidate link yourself; it is their
