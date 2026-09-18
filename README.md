@@ -16,6 +16,9 @@ session is saved for later review.
 | Component | Purpose |
 | --- | --- |
 | Skill: `run-DA-livecoding` | Preflight + hands you the one-line command to start an interview in your terminal; also lists exercises, shows solutions, reads session logs, helps add exercises and troubleshoot. Invoke it as `/qubika-livecoding:run-DA-livecoding` or in natural language. The full app ships inside the skill (`skills/run-DA-livecoding/app/`). |
+| Skill: `prepare-DA-interview` | Pre-call prep from recruiter screening notes and/or a CV, against one or more job descriptions (pasted, or Jira tickets): must-have coverage table, gap questions, two ready-to-run interview scenarios, logistics and risk flags, and a DASRI/DASRII seniority pre-read. Invoke as `/qubika-livecoding:prepare-DA-interview` or "prep the interview for candidate X". |
+| `standards/roles/` | The DASRI / DASRII career-path definitions the prep skill checks evidence against. |
+| `workspace-template/` | Empty skeleton for your own interview workspace. Candidate files never live in this repo. |
 
 ## Install (as a Claude Code plugin)
 
@@ -139,6 +142,34 @@ never sees them.
 `<timestamp>/` when no name was given, and never inside the plugin), holding a
 `session.jsonl` with every query, its verdict and reason, its style flags, and
 the final text of each editor.
+
+## Interview prep (`prepare-DA-interview`)
+
+Before the call, ask *"prep the interview for candidate X"* (or run
+`/qubika-livecoding:prepare-DA-interview`) and hand over whatever the funnel has
+produced: the recruiter's screening notes, a CV, or both, plus the opening.
+Job descriptions can be pasted, or given as Atlassian/Jira tickets, which the
+skill fetches for you. Several openings at once is fine; it compares them side
+by side and says which is the more plausible fit.
+
+You get a must-have coverage table (one row per requirement, none skipped),
+questions grouped by the gaps they close, two scenarios ready to read out
+loud with what a strong and a weak answer sound like, logistics and risk flags
+(notice period, contract type, English against how client-facing the seat is),
+and a read on where the evidence points for DASRI vs DASRII. Nothing in it is
+a verdict on the candidate: there is no transcript yet, so it is written as
+hypotheses to test on the call.
+
+**Candidate data never lives in this repo.** The skill reads and writes a
+workspace outside it, resolved as `$DA_INTERVIEWS_DIR` if set, else
+`~/qubika-da-interviews/`. Copy the skeleton once:
+
+```bash
+cp -R workspace-template ~/qubika-da-interviews
+```
+
+See `workspace-template/README.md` for the per-candidate layout. In a chat
+client with no filesystem, the prep is delivered inline instead.
 
 ## Security model (short version)
 

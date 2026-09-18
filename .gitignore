@@ -6,3 +6,21 @@ venv/
 # interview session logs (never inside the plugin, but just in case)
 sessions/
 *.jsonl
+
+# candidate data (never inside the plugin, but just in case)
+# the real workspace is $DA_INTERVIEWS_DIR, default ~/qubika-da-interviews/
+Candidates/
+qubika-da-interviews/
+*_InterviewPrep.md
+*_Assessment.md
+# CVs, transcripts and recruiter notes; no legitimate .pdf/.doc/.docx/.txt
+# lives in this repo, exercise fixtures are .csv/.sql/.json/.md
+*.pdf
+*.doc
+*.docx
+*.txt
+!requirements.txt
+# the committed skeleton is the one exception, and only its .gitkeep
+!workspace-template/Candidates/
+workspace-template/Candidates/*
+!workspace-template/Candidates/.gitkeep
