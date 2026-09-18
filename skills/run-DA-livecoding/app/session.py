@@ -4,7 +4,6 @@ import json
 import os
 import re
 import secrets
-import shutil
 import threading
 import time
 import unicodedata
@@ -22,8 +21,35 @@ def slugify(name, max_len=40):
     return slug[:max_len].rstrip("-")
 
 
+def safe_dirname(name, max_len=60):
+    """Candidate name as a directory name: readable, but unable to escape.
+
+    The session log lives in the candidate's own workspace folder, which
+    assess-DA-interview later reads as "Candidates/<Candidate Name>/", so the
+    name is kept as typed rather than slugified. Path separators, NUL and any
+    leading dot come out, which is what stops "../.." from being a directory.
+    Falls back to the slug, then to a placeholder, if nothing readable is left.
+    """
+    cleaned = "".join(" " if c in "/\\\0" else c for c in (name or ""))
+    cleaned = " ".join(cleaned.split()).strip(". ")
+    return cleaned[:max_len].strip(". ") or slugify(name) or "unnamed-candidate"
+
+
+def compact_name(name, max_len=40):
+    """'Alejandro Almeida' -> 'AlejandroAlmeida'; 'María Pérez' -> 'MariaPerez'.
+
+    The FirstnameLastname form the other per-candidate files already use
+    (FirstnameLastname_Assessment.md, FirstnameLastname_InterviewPrep.md), so
+    the SQL log sorts next to them. ASCII only, so it is safe in a filename.
+    """
+    ascii_text = (unicodedata.normalize("NFKD", name or "")
+                  .encode("ascii", "ignore").decode("ascii"))
+    parts = [p for p in re.split(r"[^A-Za-z0-9]+", ascii_text) if p]
+    return "".join(p[:1].upper() + p[1:] for p in parts)[:max_len] or "Candidate"
+
+
 class Session:
-    def __init__(self, exercise_names, ttl_min, session_dir, candidate=None):
+    def __init__(self, exercise_names, ttl_min, log_path, candidate=None):
         self.candidate = candidate  # interviewer-only; never sent to the browser
         self.token = secrets.token_urlsafe(16)
         self.created_at = time.time()
@@ -36,9 +62,11 @@ class Session:
         self.runs = []
         self.run_lock = threading.Lock()
         self.last_run_ts = 0.0
-        self.session_dir = session_dir
-        os.makedirs(session_dir, exist_ok=True)
-        self.log_path = os.path.join(session_dir, "session.jsonl")
+        # A path, not a directory: the log lands straight in the candidate's
+        # folder, beside their CV, transcript and assessment. Nothing here may
+        # ever remove that directory — see discard().
+        self.log_path = log_path
+        os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
         self._lock = threading.Lock()
         self._log_file = open(self.log_path, "a", encoding="utf-8")
         self._ended = False
@@ -82,12 +110,30 @@ class Session:
             self._log_file.flush()
 
     def discard(self):
-        """Drop a session that never started: close the log, remove its dir."""
+        """Drop a session that never started: close the log, delete just it.
+
+        Only the log file. The directory holding it is the candidate's own
+        folder, with their CV, transcript and assessment in it, so removing
+        the directory here would destroy the interview record.
+        """
         with self._lock:
             self._ended = True
             if not self._log_file.closed:
                 self._log_file.close()
-        shutil.rmtree(self.session_dir, ignore_errors=True)
+        try:
+            os.remove(self.log_path)
+        except OSError:
+            pass
+        # Then the containing directory, but only if this left it empty --
+        # rmdir refuses a non-empty one, which is exactly the guarantee
+        # wanted: a candidate folder holding a CV, transcript or assessment
+        # can never be removed here. It only ever clears a timestamp folder
+        # under the legacy layout, or a candidate folder this aborted run
+        # created and never put anything else in.
+        try:
+            os.rmdir(os.path.dirname(self.log_path))
+        except OSError:
+            pass
         self.shutdown.set()
 
     def end(self, reason):

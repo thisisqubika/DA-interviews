@@ -61,7 +61,7 @@ BOOTSTRAP = {
 class TestServer(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.session = Session(["ex1"], ttl_min=60, session_dir=self.tmp.name)
+        self.session = Session(["ex1"], ttl_min=60, log_path=os.path.join(self.tmp.name, "session.jsonl"))
         self.httpd = build_server(self.session, StubEngine(), BOOTSTRAP,
                                   "<html>PAGE</html>", port=0, quiet=True)
         self.port = self.httpd.server_address[1]
@@ -246,7 +246,7 @@ class TestInterviewerOnlyData(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.session = Session(["ex1"], ttl_min=60, session_dir=self.tmp.name,
+        self.session = Session(["ex1"], ttl_min=60, log_path=os.path.join(self.tmp.name, "session.jsonl"),
                                candidate=SENTINEL_NAME)
         self.httpd = build_server(self.session, StubEngine(), BOOTSTRAP,
                                   "<html>PAGE</html>", port=0, quiet=True,
@@ -316,7 +316,7 @@ class TestExtrasCannotBreakARun(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.session = Session(["ex1"], ttl_min=60, session_dir=self.tmp.name)
+        self.session = Session(["ex1"], ttl_min=60, log_path=os.path.join(self.tmp.name, "session.jsonl"))
         self.httpd = build_server(self.session, StubEngine(), BOOTSTRAP,
                                   "<html>PAGE</html>", port=0, quiet=False,
                                   expected=_expected_one())

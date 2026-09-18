@@ -30,8 +30,10 @@ the interview console:
 python3 serve.py --candidate "Full Name"
 ```
 
-`--candidate` is optional: the name is stored in the log, shown in the banner
-and appended as a slug to the session folder name. All commands here assume the app directory is your working directory. If it
+`--candidate` is **required**: it names the candidate folder the session log
+is written to, and also appears in the log, the banner and the farewell. Leave
+it out and the app asks for it at the prompt; give it nothing and it exits
+before starting anything. All commands here assume the app directory is your working directory. If it
 isn't — e.g. the app is installed as a plugin under
 `~/.claude/plugins/…/skills/run-DA-livecoding/app/` — use the absolute path
 instead: `python3 "<APP>/serve.py"`. `serve.py` resolves its exercises, static
@@ -73,7 +75,7 @@ All options, combinable:
 
 | Option | Effect |
 | --- | --- |
-| `--candidate "Full Name"` | Puts the name in the log, the banner, the farewell and the session folder name. Optional, but you will want it. |
+| `--candidate "Full Name"` | **Required.** Names the candidate folder the log is written to, and appears in the log, the banner and the farewell. Asked for at the prompt if omitted. |
 | `--exercise exercise_01,exercise_03` | Serve a subset. Default: all five. |
 | `--tunnel cloudflare` / `--tunnel localhost.run` | Force one link provider. Default: start both and keep the first one that proves reachable. |
 | `--no-tunnel` | Localhost only, no public link. The fallback when no provider works: share your own screen and the candidate dictates the SQL. |
@@ -137,11 +139,18 @@ showing it. localhost.run names are hexadecimal.
 
 Everything is kept in a JSONL log for later review — queries, results,
 rejections, each run's `check` verdict and `style` flags, the candidate's name
-in `session_start`, and the final SQL of each exercise. It lands in
-`<workspace>/data/data_analytics_livecoding/sessions/<ts>/` in this dev
-checkout, or `~/qubika-sql-interviews/sessions/<ts>/` when the app is
-installed elsewhere (e.g. as a plugin). Override with
-`DATA_ANALYTICS_LIVECODING_DATA_DIR`.
+in `session_start`, and the final SQL of each exercise. It lands in the
+candidate's own folder in the interviewer's workspace,
+`<workspace>/Candidates/<Candidate Name>/<FirstnameLastname>_SQL_<ts>.jsonl`,
+where `<workspace>` is `$DA_INTERVIEWS_DIR` if set, else
+`~/qubika-da-interviews/`. That is deliberate: the SQL log sits next to the
+CV, the transcript and the assessment for the same person, and
+`assess-DA-interview` reads it from there instead of asking what happened.
+
+Setting `DATA_ANALYTICS_LIVECODING_DATA_DIR` opts back into the old flat
+layout, `<that dir>/sessions/<ts>_<candidate-slug>/`, which keeps every
+session in one tree at the cost of that link. The tests use it for exactly
+that reason.
 
 ## Suggested interview flow
 
@@ -237,8 +246,12 @@ python3 -m unittest discover -s tests   # or: -s "<APP>/tests"
 5. Answer one exercise wrongly (drop the `LIMIT`, return the id instead of the
    name) and then correctly but written differently (a CTE, other aliases):
    `FAIL:*` with a reason, then `PASS`.
-6. `--candidate "Ana Test"`: the banner shows the name, the session folder ends
-   in `_ana-test`, and Ctrl+C names the candidate in the farewell.
+6. `--candidate "Ana Test"`: the banner shows the name, the log lands in
+   `<workspace>/Candidates/Ana Test/AnaTest_SQL_<ts>.jsonl`, and Ctrl+C names
+   the candidate in the farewell.
+7. No `--candidate` at all: it asks for the name at the prompt. Answer with a
+   blank line three times, or Ctrl+C, and it exits without starting a session
+   or leaving a folder behind.
 
 ## Future evolution (deliberately out of v1)
 
