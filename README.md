@@ -18,6 +18,7 @@ session is saved for later review.
 | Skill: `run-DA-livecoding` | Preflight + hands you the one-line command to start an interview in your terminal; also lists exercises, shows solutions, reads session logs, helps add exercises and troubleshoot. Invoke it as `/qubika-livecoding:run-DA-livecoding` or in natural language. The full app ships inside the skill (`skills/run-DA-livecoding/app/`). |
 | Skill: `prepare-DA-interview` | Pre-call prep from recruiter screening notes and/or a CV, against one or more job descriptions (pasted, or Jira tickets): must-have coverage table, gap questions, two ready-to-run interview scenarios, logistics and risk flags, and a DASRI/DASRII seniority pre-read. Invoke as `/qubika-livecoding:prepare-DA-interview` or "prep the interview for candidate X". |
 | Skill: `assess-DA-interview` | Post-call write-up from the interview transcript (a Tactiq link, a Google Doc, a local file) plus the live SQL session log: verdict, DASRI/DASRII seniority, client fit per opening, and eleven evidence-backed categories against the shared template. Invoke as `/qubika-livecoding:assess-DA-interview` or "process the interview for candidate X". |
+| Skill: `run-DA-screener` | The **recruiting team's** 5-minute SQL check, run during the screening call before anyone technical is involved. Two exercises on a different dataset, served from a static page (`screener-site/`) through a per-candidate link that expires by itself; the candidate pastes their session back and the skill writes the PASS / NOT PASS note for Manatal. No terminal, no install, nothing to stop — it is built to be used from the Claude app. Invoke as `/qubika-livecoding:run-DA-screener` or "run the SQL screener". |
 | `standards/` | The team's shared source of truth for what a good assessment looks like: `interview_template.md` (the canonical structure), `assessment-lessons.md` (judgment rules distilled from real assessments), and `roles/` (the DASRI / DASRII career-path definitions both skills check evidence against). |
 | `workspace-template/` | Empty skeleton for your own interview workspace. Candidate files never live in this repo. |
 
@@ -149,6 +150,72 @@ same person, which is where `assess-DA-interview` reads it from. Setting
 `DATA_ANALYTICS_LIVECODING_DATA_DIR` opts back into the old flat layout,
 `<that dir>/sessions/<timestamp>_<candidate-slug>/`, at the cost of that
 link.
+
+## Recruiter screener (`run-DA-screener`)
+
+Earlier in the funnel, before any of the above: the recruiter running the
+screening call asks *"run the SQL screener for Maria Clara"* (or
+`/qubika-livecoding:run-DA-screener`) and gets a link **written for that one
+candidate**, plus the words to say during the exercise. The candidate opens it,
+writes SQL in their own browser, and clicks **Finish & copy session** — which
+closes the exercises and hands them the text to paste back in the meeting chat.
+The recruiter pastes it into the chat and gets a **PASS or NOT PASS**, with the
+candidate's own queries quoted and the timings. No middle grades: the two
+exercises are easy enough that anyone who writes SQL clears them inside five
+minutes, explanation included.
+
+**One candidate, one link, and it expires.** The page is deployed once
+(`screener-site/`, a Cloudflare Worker serving static assets) and is always up
+at **https://qubika-sql-screener.screener-site.workers.dev**; what is
+per-candidate is the link, which carries their name and the moment it dies:
+
+```
+https://qubika-sql-screener.screener-site.workers.dev/?c=Maria%20Clara%20Zordan&id=mcz-0922-1530&x=2026-09-22T18:15:00Z
+```
+
+Past `x` the page refuses to open, and a session still running when the clock
+hits it closes itself — with the transcript still copyable, so time running out
+never costs the evidence. Expiry is checked against the **host's** clock (the
+`Date` response header), not the candidate's device, so winding the laptop back
+does not reopen a session. Nothing is published, shared or deleted per session;
+two recruiters screening two candidates at once is just two links. The trade for
+having no server: a live link cannot be revoked before its expiry — keep the
+window at 45 minutes, and redeploy at a different path in the rare case a link
+has to die early.
+
+It is deliberately the opposite of `run-DA-livecoding` in how it runs: no
+Python, no terminal, no tunnel, no process to stop.
+`screener-site/public/index.html` is the whole app — statements, seed data,
+editor and SQLite (sql.js) compiled to WebAssembly in `public/vendor/`, served
+from the site itself so a blocked CDN cannot take an interview down. Redeploy
+with `cd screener-site && npx wrangler deploy`; `screener-site/README.md`
+covers the link format and what a host has to get right.
+
+Two exercises only — a count with a filter, and a join between two tables
+filtered by a **text** value (`area = 'Data'`), never a number. That change is
+the point: with a numeric filter, candidates who half-remember aggregation
+reach for `HAVING` instead of `WHERE`, and the screener ends up measuring that
+confusion instead of whether they can filter and join at all. The dataset
+(`job_openings` + `candidates`) is also deliberately different from the
+technical interview's, so passing the screener does not preview that session.
+
+Interviewer-only material lives in `skills/run-DA-screener/reference/`:
+`answer-key.md` (both solutions, the exact expected results, and what each
+wrong result means) and `screener-note.md` (the PASS / NOT PASS rule and the
+note format). The page itself contains no solutions — candidates can read its
+source.
+
+**Installing it for a recruiter (Claude app).** Recruiters do not need this
+repo, Claude Code, or anything else installed. Zip the skill folder and have
+them upload it in the Claude app under Settings → Capabilities → Skills:
+
+```bash
+cd skills && zip -r ~/Desktop/run-DA-screener.zip run-DA-screener
+```
+
+The site is already deployed and the host is written into `SKILL.md` (the
+`SCREENER_HOST` line), so the zip works as handed out. If the host ever
+changes, that line is the one place to update.
 
 ## Interview prep (`prepare-DA-interview`)
 

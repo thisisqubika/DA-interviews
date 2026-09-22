@@ -1,7 +1,7 @@
 {
   "name": "qubika-livecoding",
-  "version": "0.7.0",
-  "description": "Standardized Data Analyst interview kit: live SQL exercises (embedded DuckDB, ephemeral public link, Ctrl+C kills it), pre-call CV and screening-notes prep, and a post-call assessment written from the transcript and the live SQL log against a shared template and DASRI/DASRII criteria. One plugin, one process, for every interviewer.",
+  "version": "0.8.0",
+  "description": "Standardized Data Analyst interview kit: live SQL exercises (embedded DuckDB, ephemeral public link, Ctrl+C kills it), pre-call CV and screening-notes prep, and a post-call assessment written from the transcript and the live SQL log against a shared template and DASRI/DASRII criteria, plus a browser-only two-exercise SQL screener the recruiting team runs from chat before any of it. One plugin, for every interviewer.",
   "author": {
     "name": "Qubika Data Studio"
   },
