@@ -24,3 +24,6 @@ qubika-da-interviews/
 !workspace-template/Candidates/
 workspace-template/Candidates/*
 !workspace-template/Candidates/.gitkeep
+
+# wrangler build/deploy state
+.wrangler/

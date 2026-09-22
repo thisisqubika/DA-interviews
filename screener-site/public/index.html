@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Qubika SQL Screener</title>
+<style>
+:root{
+  /* light palette — the same blue the interview app has always used */
+  --blue:#1A6DFF; --blue-soft:#eff4ff; --sel:rgba(26,109,255,.22);
+  --ink:#101828; --muted:#667085; --line:#e4e7ec;
+  --bg:#f7f9fc; --card:#ffffff; --panel:#f4f6f8; --scrim:rgba(16,24,40,.45);
+  --red:#d92d20; --green:#067647; --amber:#b54708;
+  --kw:#1A6DFF; --fn:#7c3aed; --str:#067647; --num:#b54708; --com:#98a2b3;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --blue:#7fa8ff; --blue-soft:#1b2740; --sel:rgba(127,168,255,.26);
+    --ink:#e6eaf2; --muted:#98a2b3; --line:#2a3342;
+    --bg:#0e131b; --card:#161d29; --panel:#1d2532; --scrim:rgba(5,8,13,.6);
+    --red:#ff9c92; --green:#5ed39b; --amber:#f2b06b;
+    --kw:#7fa8ff; --fn:#c4a7ff; --str:#5ed39b; --num:#f2b06b; --com:#5f6b7f;
+  }
+}
+:root[data-theme="dark"]{
+  --blue:#7fa8ff; --blue-soft:#1b2740; --sel:rgba(127,168,255,.26);
+  --ink:#e6eaf2; --muted:#98a2b3; --line:#2a3342;
+  --bg:#0e131b; --card:#161d29; --panel:#1d2532; --scrim:rgba(5,8,13,.6);
+  --red:#ff9c92; --green:#5ed39b; --amber:#f2b06b;
+  --kw:#7fa8ff; --fn:#c4a7ff; --str:#5ed39b; --num:#f2b06b; --com:#5f6b7f;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+  "Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--ink);
+  display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--card);
+  border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{font-weight:700;font-size:18px;white-space:nowrap}
+.brand .dot{color:var(--blue)}
+.brand .sub{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+nav button{border:1px solid var(--line);background:var(--card);border-radius:8px;
+  padding:6px 12px;font-size:13px;cursor:pointer;color:var(--muted)}
+nav button.active{border-color:var(--blue);color:var(--blue);font-weight:600;
+  background:var(--blue-soft)}
+.spacer{flex:1}
+#who{border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;
+  width:190px;outline:none;background:var(--card);color:var(--ink)}
+#who:focus{border-color:var(--blue)}
+#finish{border:1px solid var(--line);background:var(--card);border-radius:8px;
+  padding:6px 12px;font-size:13px;cursor:pointer;color:var(--ink);font-weight:600}
+#finish:hover{border-color:var(--blue);color:var(--blue)}
+:where(button,input,textarea):focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+main{flex:1;display:grid;grid-template-columns:minmax(320px,5fr) minmax(380px,7fr);
+  gap:14px;padding-block:14px;padding-inline:16px;overflow:hidden;min-height:0}
+@media (max-width:900px){
+  html,body{height:auto}
+  main{grid-template-columns:1fr;overflow:visible}
+  section{overflow:visible!important}
+  #who{width:130px}
+}
+section{overflow:auto;display:flex;flex-direction:column;gap:14px;min-height:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+#statement{border-top:3px solid var(--blue)}
+#statement h1,#statement h2,#statement h3{margin:.3em 0 .4em;font-size:17px;text-wrap:balance}
+#statement p{margin:.5em 0;line-height:1.5;font-size:14px}
+#statement code{background:var(--blue-soft);color:var(--blue);padding:1px 5px;border-radius:4px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+#statement ul{margin:.4em 0;padding-left:20px;font-size:14px;line-height:1.5}
+details{border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:var(--card)}
+summary{cursor:pointer;padding:8px 12px;font-weight:600;font-size:13px}
+summary .hint{font-weight:400}
+details pre{margin:0;padding:10px 12px;background:var(--panel);font-size:12px;overflow:auto;
+  font-family:ui-monospace,Menlo,Consolas,monospace;border-top:1px solid var(--line)}
+.sample{overflow:auto;max-height:240px}
+table{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:var(--panel);font-weight:600}
+.null{color:var(--muted);font-style:italic}
+.editor-head{display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+.editor-head h4{margin:0;flex:1}
+#run{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 18px;
+  font-size:14px;font-weight:600;cursor:pointer}
+#run:disabled{opacity:.5;cursor:default}
+.hint{color:var(--muted);font-size:12px}
+.editor-wrap{position:relative;border:1px solid var(--line);border-radius:8px;
+  overflow:hidden;background:var(--card)}
+.editor-wrap:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px var(--sel)}
+#editor, #highlight code{
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:1.45;
+  padding:10px;white-space:pre-wrap;word-wrap:break-word;
+  /* metrics of both layers MUST stay identical for the overlay to align */
+}
+#editor{display:block;width:100%;min-height:170px;resize:vertical;border:none;
+  outline:none;background:transparent;color:transparent;caret-color:var(--ink);
+  position:relative;z-index:2;margin:0;scrollbar-gutter:stable}
+#editor::placeholder{color:var(--muted)}
+#editor::selection{background:var(--sel)}
+#highlight{position:absolute;inset:0;margin:0;overflow:hidden;z-index:1;
+  pointer-events:none;scrollbar-gutter:stable}
+#highlight code{display:block;color:var(--ink)}
+.tk{color:var(--kw);font-weight:600}   /* keywords */
+.tf{color:var(--fn)}                   /* functions */
+.ts{color:var(--str)}                  /* strings */
+.tn{color:var(--num)}                  /* numbers */
+.tc{color:var(--com);font-style:italic}/* comments */
+#status{font-size:13px;min-height:18px;margin-top:8px}
+#status.ok{color:var(--green)}
+#status.err{color:var(--red)}
+#status.warn{color:var(--amber)}
+#status pre{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;
+  font-size:12px;margin:4px 0 0}
+.result-card{flex:1;min-height:160px;display:flex;flex-direction:column}
+#result{overflow:auto;flex:1;min-height:0}
+#clock{font-variant-numeric:tabular-nums;min-width:42px;text-align:right}
+#modal{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:center;
+  z-index:30;padding:16px}
+.pane{display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+#modal .box{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:20px;max-width:760px;width:100%;max-height:86vh;display:flex;
+  flex-direction:column;gap:10px}
+#modal h2{margin:0;font-size:18px}
+#modal p{margin:0;font-size:13.5px;line-height:1.5;color:var(--muted)}
+#transcript{width:100%;flex:1;min-height:240px;font-family:ui-monospace,Menlo,Consolas,monospace;
+  font-size:12px;border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical;
+  background:var(--panel);color:var(--ink)}
+.modal-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.modal-actions button{border-radius:8px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer}
+#copy,#confirm-finish{background:var(--blue);color:#fff;border:none}
+#close,#cancel-finish{background:var(--card);color:var(--muted);border:1px solid var(--line)}
+#copied{color:var(--green);font-size:13px}
+#over{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;
+  z-index:20;padding:16px}
+#over .box{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:24px;max-width:460px;display:flex;flex-direction:column;gap:12px;text-align:center}
+#over h2{margin:0;font-size:18px}
+#over p{margin:0;font-size:13.5px;line-height:1.5;color:var(--muted)}
+#over .modal-actions{justify-content:center}
+#reshow{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">qubika<span class="dot">.</span><span class="sub" id="brand-sub">SQL Screener</span></div>
+  <nav id="tabs"></nav>
+  <div class="spacer"></div>
+  <span id="clock" class="hint" title="Time since you opened this page">00:00</span>
+  <input id="who" placeholder="Your full name" autocomplete="off">
+  <button id="finish">Finish &amp; copy session</button>
+</header>
+<main>
+  <section>
+    <div class="card" id="statement"><p class="hint">Loading…</p></div>
+    <div class="card"><h4>Tables</h4><div id="schemas"></div></div>
+  </section>
+  <section>
+    <div class="card">
+      <div class="editor-head">
+        <h4>Your query</h4>
+        <span class="hint">⌘/Ctrl + Enter to run</span>
+        <button id="run" disabled>▶ Run</button>
+      </div>
+      <div class="editor-wrap">
+        <pre id="highlight" aria-hidden="true"><code id="highlight-code"></code></pre>
+        <textarea id="editor" spellcheck="false" autocomplete="off"
+                  autocapitalize="off" placeholder="SELECT ..."></textarea>
+      </div>
+      <div id="status"></div>
+    </div>
+    <div class="card result-card"><h4>Results</h4>
+      <div id="result"><p class="hint">You haven't run any query yet.</p></div>
+    </div>
+  </section>
+</main>
+
+<div id="modal" hidden>
+  <div class="box">
+    <div class="pane" id="pane-confirm">
+      <h2>Finish the exercise?</h2>
+      <p>This closes the exercises: after this you cannot run any more queries.
+        The text to send to the interviewer comes next.</p>
+      <div class="modal-actions">
+        <button id="confirm-finish">Yes, finish</button>
+        <button id="cancel-finish">Not yet</button>
+      </div>
+    </div>
+    <div class="pane" id="pane-send" hidden>
+      <h2>Send your session to the interviewer</h2>
+      <p>Copy the text below and paste it in the meeting chat. It contains the
+        queries you ran — nothing else. The exercises are now closed.</p>
+      <textarea id="transcript" spellcheck="false" readonly></textarea>
+      <div class="modal-actions">
+        <button id="copy">Copy to clipboard</button>
+        <button id="close">Close</button>
+        <span id="copied" hidden>Copied ✓</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="over" hidden>
+  <div class="box">
+    <h2 id="over-title">Session ended</h2>
+    <p id="over-text">Thanks — send the copied text to the interviewer in the
+      meeting chat if you have not already.</p>
+    <div class="modal-actions"><button id="reshow">Show my session text again</button></div>
+  </div>
+</div>
+
+<script src="./vendor/sql-wasm.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const EMPTY_RESULT = "<p class='hint'>You haven't run any query yet.</p>";
+const ROW_CAP = 200;
+// The engine ships with the site (vendor/), so a blocked CDN or a proxied
+// network cannot take the exercise down. cdnjs is only the fallback.
+const VENDOR = "./vendor/";
+const CDN_FALLBACK = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.14.2/";
+
+// One deployed page, one link per candidate. The link carries who the session
+// is for and when it dies:  ?c=Full%20Name&id=session-id&x=2026-09-22T15:30:00Z
+// Past `x` the page refuses to open and closes itself mid-session, checked
+// against the server's clock rather than the candidate's own.
+let SESSION = { candidate: "", id: "", exp: 0, practice: false };
+
+// ---------------------------------------------------------------- content ---
+const SCHEMA_SQL = `CREATE TABLE job_openings (
+    id          INTEGER,
+    title       VARCHAR,
+    area        VARCHAR,
+    opened_date DATE
+);
+
+CREATE TABLE candidates (
+    id                  INTEGER,
+    opening_id          INTEGER,
+    full_name           VARCHAR,
+    applied_date        DATE,
+    stage               VARCHAR,
+    expected_salary_usd INTEGER
+);`;
+
+const OPENINGS = [
+  [1,"Data Analyst","Data","2026-01-12"],
+  [2,"Analytics Engineer","Data","2026-02-03"],
+  [3,"Backend Developer","Engineering","2026-01-20"],
+  [4,"Frontend Developer","Engineering","2026-03-02"],
+  [5,"Product Designer","Design","2026-02-17"],
+  [6,"QA Automation","QA","2026-01-27"],
+  [7,"Data Engineer","Data","2026-03-16"],
+  [8,"Marketing Analyst","Marketing","2026-02-24"],
+];
+
+// [id, opening_id, full_name, applied_date, stage, expected_salary_usd]
+const CANDIDATES = [
+  [1,1,"Lucía Fernández","2026-01-15","hired",2600],
+  [2,1,"Mateo Rodríguez","2026-01-18","rejected",2400],
+  [3,1,"Camila Duarte","2026-02-02","interview",2750],
+  [4,1,"Joaquín Pereira","2026-02-11","applied",2300],
+  [5,1,"Valentina Rossi","2026-03-05","screening",2900],
+  [6,2,"Pablo Almeida","2026-02-06","offer",3400],
+  [7,2,"Sofía Martínez","2026-02-20","hired",3200],
+  [8,2,"Nicolás Vieira","2026-03-09","rejected",3000],
+  [9,2,"Renata Lima","2026-03-21","applied",null],
+  [10,7,"Diego Castro","2026-03-18","screening",3600],
+  [11,7,"Ana Beatriz Souza","2026-04-02","interview",3800],
+  [12,7,"Tomás Ibáñez","2026-04-10","applied",3500],
+  [13,3,"Federico Núñez","2026-01-22","hired",3100],
+  [14,3,"Martina Silva","2026-01-29","rejected",2950],
+  [15,3,"Gonzalo Ferreira","2026-02-05","interview",3300],
+  [16,3,"Paula Bermúdez","2026-02-14","applied",2800],
+  [17,3,"Emiliano Costa","2026-03-01","screening",3150],
+  [18,4,"Julieta Moreira","2026-03-07","hired",2700],
+  [19,4,"Santiago Varela","2026-03-12","applied",2500],
+  [20,4,"Agustina Real","2026-03-19","rejected",2650],
+  [21,4,"Rodrigo Pinto","2026-04-01","screening",2850],
+  [22,5,"Florencia Gómez","2026-02-19","offer",2400],
+  [23,5,"Iván Carrasco","2026-02-27","applied",2200],
+  [24,5,"Marina Ocampo","2026-03-08","rejected",2350],
+  [25,5,"Leandro Bianchi","2026-03-25","interview",2550],
+  [26,6,"Carolina Méndez","2026-02-01","hired",2100],
+  [27,6,"Esteban Quiroga","2026-02-09","applied",1950],
+  [28,6,"Micaela Torres","2026-02-23","screening",2050],
+  [29,6,"Franco Delgado","2026-03-14","rejected",2000],
+  [30,6,"Lorena Pacheco","2026-03-28","applied",null],
+  [31,8,"Guillermo Sosa","2026-01-31","hired",1900],
+  [32,8,"Daniela Rivas","2026-02-12","interview",2150],
+  [33,8,"Andrés Cabral","2026-02-26","applied",1850],
+  [34,8,"Victoria Mella","2026-03-11","rejected",2250],
+  [35,8,"Ramiro Otero","2026-03-23","screening",2000],
+  [36,3,"Cecilia Prado","2026-04-05","applied",3250],
+  [37,4,"Hernán Latorre","2026-04-08","interview",2600],
+  [38,5,"Belén Aguirre","2026-04-12","applied",2450],
+  [39,6,"Maximiliano Roca","2026-04-15","screening",2100],
+  [40,8,"Noelia Ferrán","2026-04-18","offer",2300],
+];
+
+const EXERCISES = [
+  {
+    name: "exercise_01",
+    title: "Exercise 1",
+    tables: ["candidates"],
+    statement: `# Exercise 1
+
+You have the \`candidates\` table, with everyone who applied to our job
+openings.
+
+**Task:** Write the query that returns how many candidates are in \`hired\`
+stage.
+
+Return a single number.`
+  },
+  {
+    name: "exercise_02",
+    title: "Exercise 2",
+    tables: ["job_openings", "candidates"],
+    statement: `# Exercise 2
+
+You have the \`job_openings\` and \`candidates\` tables.
+
+**Task:** List the candidate name (\`full_name\`), the application date
+(\`applied_date\`) and the expected salary (\`expected_salary_usd\`) of every
+candidate who applied to an opening in the \`Data\` area.
+
+Sort the result by application date, most recent first.`
+  },
+];
+
+// ------------------------------------------------------------------ state ---
+let db = null, current = null, running = false, finished = false;
+let clockTimer = null, expiryTimer = null, savedTranscript = "", skew = 0;
+const LOCK_KEY = "qubika-sql-screener-ended:" + (SESSION.id || "shared");
+const LOCK_TTL_MS = 90 * 60 * 1000;   // a stale lock never blocks the next session
+const state = {};       // exercise -> {text, resultHtml, statusHtml, statusClass}
+const log = [];         // {ex, at, sql, ok, summary, error, ms}
+const startedAt = Date.now();
+
+// ------------------------------------------------------------------- boot ---
+function loadSqlJs(){
+  if (window.initSqlJs) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = CDN_FALLBACK + "sql-wasm.js";
+    s.onload = () => window.initSqlJs
+      ? resolve() : reject(new Error("the SQL engine did not load"));
+    s.onerror = () => reject(new Error("could not reach the SQL engine"));
+    document.head.appendChild(s);
+  });
+}
+
+// Pure, so it can be reasoned about (and tested) on its own.
+function parseLink(search, nowMs){
+  const q = new URLSearchParams(search);
+  const name = (q.get("c") || "").trim();
+  const id = (q.get("id") || "").trim();
+  if (q.get("demo") === "1" || q.get("practice") === "1")
+    return { ok: true, name, id: id || "practice", exp: nowMs + 30 * 60000,
+             practice: true };
+  const raw = (q.get("x") || "").trim();
+  if (!raw) return { ok: false, reason: "no-link" };
+  const exp = Date.parse(raw);
+  if (!Number.isFinite(exp)) return { ok: false, reason: "no-link" };
+  if (nowMs >= exp) return { ok: false, reason: "expired" };
+  return { ok: true, name, id: id || String(exp), exp, practice: false };
+}
+
+// The host's clock, not the candidate's: winding the laptop back does not
+// reopen an expired link. Falls back to the device clock if the HEAD fails.
+async function serverSkew(){
+  try {
+    const r = await fetch(location.pathname + "?_t=" + Date.now(),
+                          { method: "HEAD", cache: "no-store" });
+    const d = Date.parse(r.headers.get("date") || "");
+    if (Number.isFinite(d)) return d - Date.now();
+  } catch (e){}
+  return 0;
+}
+function now(){ return Date.now() + skew; }
+
+async function boot(){
+  skew = await serverSkew();
+  const link = parseLink(location.search, now());
+  if (!link.ok) return showEnded(link.reason);
+  SESSION = { candidate: link.name, id: link.id, exp: link.exp,
+              practice: link.practice };
+
+  const locked = readLock();
+  if (locked){ savedTranscript = locked.text || ""; showEnded("finished"); return; }
+  clockTimer = setInterval(tickClock, 1000);
+  expiryTimer = setTimeout(expire, Math.max(0, SESSION.exp - now()));
+  if (SESSION.candidate){
+    $("who").value = SESSION.candidate;
+    $("who").readOnly = true;
+    $("who").title = "This session was opened for " + SESSION.candidate;
+  }
+  if (SESSION.practice) $("brand-sub").textContent = "SQL Screener · practice";
+  for (const e of EXERCISES)
+    state[e.name] = { text:"", resultHtml:null, statusHtml:"", statusClass:"" };
+  renderTabs();
+  select(EXERCISES[0].name);
+  try {
+    await loadSqlJs();
+    const SQL = await window.initSqlJs({ locateFile: f => VENDOR + f })
+      .catch(() => window.initSqlJs({ locateFile: f => CDN_FALLBACK + f }));
+    db = new SQL.Database();
+    db.run(SCHEMA_SQL);
+    const ins = (sql, rows) => {
+      const st = db.prepare(sql);
+      for (const r of rows){ st.run(r); }
+      st.free();
+    };
+    ins("INSERT INTO job_openings VALUES (?,?,?,?)", OPENINGS);
+    ins("INSERT INTO candidates VALUES (?,?,?,?,?,?)", CANDIDATES);
+  } catch (err){
+    setStatus(current, "The SQL engine could not start (" + esc(err.message) +
+      "). Reload the page; if it keeps failing, tell the interviewer.", "err");
+    return;
+  }
+  $("run").disabled = false;
+  renderSchemas(EXERCISES.find(x => x.name === current));
+}
+
+function renderTabs(){
+  $("tabs").innerHTML = EXERCISES.map(e =>
+    `<button data-name="${esc(e.name)}">${esc(e.title)}</button>`).join("");
+  document.querySelectorAll("nav button").forEach(b =>
+    b.addEventListener("click", () => select(b.dataset.name)));
+}
+
+function select(name){
+  current = name;
+  document.querySelectorAll("nav button").forEach(b =>
+    b.classList.toggle("active", b.dataset.name === name));
+  const e = EXERCISES.find(x => x.name === name);
+  $("statement").innerHTML = md(e.statement);
+  renderSchemas(e);
+  $("editor").value = state[name].text;
+  paintEditor();
+  $("result").innerHTML = state[name].resultHtml || EMPTY_RESULT;
+  const st = $("status");
+  st.className = state[name].statusClass;
+  st.innerHTML = state[name].statusHtml;
+}
+
+function renderSchemas(e){
+  if (!db){ $("schemas").innerHTML = "<p class='hint'>Loading the data…</p>"; return; }
+  let html = "";
+  for (const t of e.tables){
+    const res = db.exec(`SELECT * FROM ${t} LIMIT 5`)[0];
+    html += `<details open><summary>${esc(t)} `
+          + `<span class="hint">— first ${res.values.length} rows</span></summary>`
+          + `<div class="sample"><table><thead><tr>`
+          + res.columns.map(c => `<th>${esc(c)}</th>`).join("")
+          + `</tr></thead><tbody>`
+          + res.values.map(r => `<tr>${r.map(cell).join("")}</tr>`).join("")
+          + `</tbody></table></div></details>`;
+  }
+  const ddl = SCHEMA_SQL.split("\n\n")
+    .filter(block => e.tables.some(t => block.includes("CREATE TABLE " + t)))
+    .join("\n\n");
+  html += `<details><summary>Full DDL</summary><pre>${esc(ddl)}</pre></details>`;
+  $("schemas").innerHTML = html;
+}
+const cell = v => `<td>${(v === null || v === undefined)
+  ? '<span class="null">NULL</span>' : esc(v)}</td>`;
+
+// Tiny markdown subset: headings, - lists, **bold**, `code`.
+function md(src){
+  const lines = esc(String(src)).split("\n");
+  let html = "", para = [], inList = false;
+  const flushP = () => { if (para.length){ html += "<p>" + inline(para.join(" ")) + "</p>"; para = []; } };
+  const closeList = () => { if (inList){ html += "</ul>"; inList = false; } };
+  for (const line of lines){
+    const h = line.match(/^(#{1,3})\s+(.*)/);
+    if (h){ flushP(); closeList();
+      const lvl = Math.min(h[1].length, 3);
+      html += `<h${lvl}>${inline(h[2])}</h${lvl}>`; continue; }
+    const li = line.match(/^\s*-\s+(.*)/);
+    if (li){ flushP();
+      if (!inList){ html += "<ul>"; inList = true; }
+      html += `<li>${inline(li[1])}</li>`; continue; }
+    if (!line.trim()){ flushP(); closeList(); continue; }
+    para.push(line.trim());
+  }
+  flushP(); closeList();
+  return html;
+}
+function inline(s){
+  return s.replace(/`([^`]+)`/g, "<code>$1</code>")
+          .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+
+// --- SQL syntax highlighting (transparent textarea over a painted layer) ---
+const SQL_KEYWORDS = new Set(("select from where group by having order limit offset " +
+  "join inner left right full outer cross on as and or not in is null distinct " +
+  "case when then else end like between union all with exists desc asc " +
+  "using cast values intersect except").split(" "));
+const SQL_FUNCS = new Set(("count sum avg min max round coalesce concat lower upper " +
+  "substr substring abs length trim replace date strftime julianday " +
+  "rank dense_rank row_number lag lead nullif ifnull").split(" "));
+
+function highlightSQL(src){
+  const re = /(--[^\n]*)|(\/\*[\s\S]*?\*\/)|('(?:[^']|'')*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)|([\s\S])/g;
+  let out = "", m;
+  while ((m = re.exec(src)) !== null){
+    const tok = m[0];
+    if (m[1] || m[2]) out += `<span class="tc">${esc(tok)}</span>`;
+    else if (m[3]) out += `<span class="ts">${esc(tok)}</span>`;
+    else if (m[4]) out += `<span class="tn">${esc(tok)}</span>`;
+    else if (m[5]){
+      const w = tok.toLowerCase();
+      if (SQL_KEYWORDS.has(w)) out += `<span class="tk">${esc(tok)}</span>`;
+      else if (SQL_FUNCS.has(w)) out += `<span class="tf">${esc(tok)}</span>`;
+      else out += esc(tok);
+    } else out += esc(tok);
+  }
+  return out;
+}
+
+function paintEditor(){
+  // trailing "\n" keeps the layer as tall as the textarea's last empty line
+  $("highlight-code").innerHTML = highlightSQL($("editor").value + "\n");
+  syncEditorScroll();
+}
+function syncEditorScroll(){
+  $("highlight").scrollTop = $("editor").scrollTop;
+  $("highlight").scrollLeft = $("editor").scrollLeft;
+}
+$("editor").addEventListener("scroll", syncEditorScroll);
+$("editor").addEventListener("input", () => {
+  paintEditor();
+  if (current) state[current].text = $("editor").value;
+});
+$("editor").addEventListener("keydown", ev => {
+  if (ev.key === "Tab"){
+    ev.preventDefault();
+    const el = $("editor"), s = el.selectionStart, e = el.selectionEnd;
+    el.value = el.value.slice(0, s) + "  " + el.value.slice(e);
+    el.selectionStart = el.selectionEnd = s + 2;
+    el.dispatchEvent(new Event("input"));
+  }
+  if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter"){
+    ev.preventDefault();
+    run();
+  }
+});
+
+// -------------------------------------------------------------------- run ---
+// Read-only by construction: anything that is not a single SELECT/WITH query
+// is refused, so the seed data survives the whole session.
+function refuse(sql){
+  const stripped = sql.replace(/--[^\n]*/g, " ").replace(/\/\*[\s\S]*?\*\//g, " ").trim();
+  if (!stripped) return "Write a query first.";
+  const head = stripped.replace(/^\(+\s*/, "").slice(0, 12).toLowerCase();
+  if (!/^(select|with)\b/.test(head))
+    return "Only SELECT queries can be run here.";
+  const bodies = stripped.replace(/'(?:[^']|'')*'/g, "''");
+  if (/;\s*\S/.test(bodies))
+    return "Run one query at a time (only one statement per run).";
+  if (/\b(attach|pragma|insert|update|delete|drop|alter|vacuum)\b/i.test(bodies))
+    return "Only SELECT queries can be run here.";
+  return null;
+}
+
+$("run").addEventListener("click", run);
+function run(){
+  if (running || finished || !current || !db) return;
+  const name = current, sql = $("editor").value;
+  const bad = refuse(sql);
+  if (bad){
+    record(name, sql, false, null, bad, 0);
+    return setStatus(name, "<pre>" + esc(bad) + "</pre>", "err");
+  }
+  running = true; $("run").disabled = true;
+  const t0 = performance.now();
+  let res;
+  try {
+    res = db.exec(sql);
+  } catch (err){
+    running = false; $("run").disabled = false;
+    const msg = String(err.message || err);
+    record(name, sql, false, null, msg, Math.round(performance.now() - t0));
+    return setStatus(name, "<pre>" + esc(msg) + "</pre>", "err");
+  }
+  const ms = Math.round(performance.now() - t0);
+  running = false; $("run").disabled = false;
+
+  const out = res[0];
+  const columns = out ? out.columns : [];
+  const all = out ? out.values : [];
+  const rows = all.slice(0, ROW_CAP);
+  const truncated = all.length > ROW_CAP;
+
+  let cls = "ok";
+  let msg = `${all.length} row${all.length === 1 ? "" : "s"} · ${ms} ms`;
+  if (truncated){ cls = "warn"; msg += ` · showing the first ${ROW_CAP}`; }
+  let t;
+  if (!rows.length){
+    t = "<p class='hint'>The query returned no rows.</p>";
+  } else {
+    t = "<table><thead><tr>"
+      + columns.map(c => `<th>${esc(c)}</th>`).join("")
+      + "</tr></thead><tbody>"
+      + rows.map(r => "<tr>" + r.map(cell).join("") + "</tr>").join("")
+      + "</tbody></table>";
+  }
+  state[name].resultHtml = t;
+  if (name === current) $("result").innerHTML = t;
+  setStatus(name, msg, cls);
+  record(name, sql, true, {columns, rows: rows.slice(0, 3), total: all.length}, null, ms);
+}
+
+function setStatus(name, html, cls){
+  if (!name) return;
+  state[name].statusHtml = html;
+  state[name].statusClass = cls;
+  if (name === current){
+    const el = $("status");
+    el.className = cls;
+    el.innerHTML = html;
+  }
+}
+
+function record(ex, sql, ok, summary, error, ms){
+  log.push({ ex, at: Date.now(), sql: sql.trim(), ok, summary, error, ms });
+}
+
+// ------------------------------------------------------------- transcript ---
+function hhmmss(ms){
+  const s = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(s / 60);
+  return `${String(m).padStart(2,"0")}:${String(s % 60).padStart(2,"0")}`;
+}
+
+function transcript(){
+  const name = SESSION.candidate || $("who").value.trim() || "(name not given)";
+  const L = [];
+  L.push("=== QUBIKA SQL SCREENER — SESSION TRANSCRIPT v1 ===");
+  if (SESSION.practice) L.push("PRACTICE RUN — not a candidate session");
+  L.push("Candidate: " + name);
+  if (SESSION.id) L.push("Session: " + SESSION.id);
+  L.push("Started: " + new Date(startedAt).toISOString().slice(0,16).replace("T"," ") + " UTC");
+  L.push("Elapsed: " + hhmmss(Date.now() - startedAt) + " (mm:ss)");
+  L.push("Timestamps below are minutes:seconds since the page was opened.");
+  for (const e of EXERCISES){
+    const runs = log.filter(r => r.ex === e.name);
+    L.push("");
+    L.push(`--- ${e.title} --- ${runs.length} run${runs.length === 1 ? "" : "s"}`
+      + (runs.length ? ` · first ${hhmmss(runs[0].at - startedAt)}`
+                     + ` · last ${hhmmss(runs[runs.length-1].at - startedAt)}` : ""));
+    if (!runs.length) L.push("(no query was run)");
+    runs.forEach((r, i) => {
+      let head = `[${i+1}] +${hhmmss(r.at - startedAt)} `;
+      if (r.ok){
+        const s = r.summary;
+        head += `OK · ${s.total} row${s.total === 1 ? "" : "s"} · ${r.ms} ms`;
+        L.push(head);
+        L.push(r.sql);
+        if (s.rows.length){
+          L.push("   -> " + s.columns.join(" | "));
+          for (const row of s.rows)
+            L.push("      " + row.map(v => v === null ? "NULL" : String(v)).join(" | "));
+          if (s.total > s.rows.length) L.push(`      … (${s.total - s.rows.length} more rows)`);
+        }
+      } else {
+        head += "ERROR: " + (r.error || "unknown");
+        L.push(head);
+        L.push(r.sql);
+      }
+    });
+    const left = (state[e.name].text || "").trim();
+    if (left && (!runs.length || left !== runs[runs.length-1].sql)){
+      L.push("EDITOR AT THE END (never run):");
+      L.push(left);
+    }
+  }
+  L.push("");
+  L.push("=== END OF TRANSCRIPT ===");
+  return L.join("\n");
+}
+
+function tickClock(){ $("clock").textContent = hhmmss(Date.now() - startedAt); }
+
+// The session is one-shot: finishing closes the exercises in this browser and
+// survives a reload, so nobody keeps working after sending their answers. The
+// lock expires by itself, and the interviewer can clear it for the next
+// candidate from the overlay.
+function readLock(){
+  if (SESSION.practice) return null;
+  try {
+    const raw = JSON.parse(localStorage.getItem(LOCK_KEY) || "null");
+    if (raw && Date.now() - (raw.at || 0) < LOCK_TTL_MS) return raw;
+    localStorage.removeItem(LOCK_KEY);
+  } catch (e){}
+  return null;
+}
+
+const ENDINGS = {
+  finished: ["Session ended",
+    "Thanks — send the copied text to the interviewer in the meeting chat if " +
+    "you have not already. There is nothing else to do on this page."],
+  expired: ["Time is up",
+    "This session has closed. If you still have your session text to send, " +
+    "use the button below."],
+  "no-link": ["This link is not valid any more",
+    "Ask the interviewer to send you a new one."]
+};
+
+function showEnded(kind){
+  const [title, text] = ENDINGS[kind] || ENDINGS["no-link"];
+  $("over-title").textContent = title;
+  $("over-text").textContent = text;
+  $("over").hidden = false;
+  $("reshow").hidden = !savedTranscript;
+}
+
+// The session closes the same way whether the candidate finished it or the
+// clock ran out: the text they can still send is built either way.
+function expire(){
+  if (finished) return;
+  endSession();
+  $("modal").hidden = true;
+  showEnded("expired");
+}
+
+function endSession(){
+  finished = true;
+  savedTranscript = transcript();
+  clearInterval(clockTimer);
+  clearTimeout(expiryTimer);
+  $("run").disabled = true;
+  $("finish").disabled = true;
+  $("editor").readOnly = true;
+  if (!SESSION.practice){
+    try { localStorage.setItem(LOCK_KEY,
+      JSON.stringify({ at: Date.now(), text: savedTranscript })); } catch (e){}
+  }
+}
+
+function openSend(){
+  $("transcript").value = savedTranscript;
+  $("copied").hidden = true;
+  $("pane-confirm").hidden = true;
+  $("pane-send").hidden = false;
+  $("modal").hidden = false;
+  $("transcript").focus();
+  $("transcript").setSelectionRange(0, 0);
+}
+
+$("finish").addEventListener("click", () => {
+  $("pane-send").hidden = true;
+  $("pane-confirm").hidden = false;
+  $("modal").hidden = false;
+  $("confirm-finish").focus();
+});
+$("cancel-finish").addEventListener("click", () => { $("modal").hidden = true; });
+$("confirm-finish").addEventListener("click", () => { endSession(); openSend(); });
+$("close").addEventListener("click", () => {
+  $("modal").hidden = true;
+  if (finished) showEnded();
+});
+$("reshow").addEventListener("click", openSend);
+
+$("copy").addEventListener("click", async () => {
+  const text = $("transcript").value;
+  let done = false;
+  try { await navigator.clipboard.writeText(text); done = true; }
+  catch (e){
+    $("transcript").removeAttribute("readonly");
+    $("transcript").select();
+    try { done = document.execCommand("copy"); } catch (e2){}
+    $("transcript").setAttribute("readonly", "");
+  }
+  $("copied").textContent = done
+    ? "Copied ✓"
+    : "Copy did not work — select the text and copy it manually.";
+  $("copied").hidden = false;
+});
+
+boot();
+</script>
+</body>
+</html>

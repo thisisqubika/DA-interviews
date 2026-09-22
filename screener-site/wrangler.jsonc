@@ -1,0 +1,13 @@
+{
+  // Static hosting for the recruiter SQL screener. No server code: the whole
+  // app is public/index.html plus the SQLite engine in public/vendor/.
+  //   deploy:  cd screener-site && npx wrangler deploy
+  "name": "qubika-sql-screener",
+  "compatibility_date": "2026-09-21",
+  "assets": {
+    "directory": "./public"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
