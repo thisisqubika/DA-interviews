@@ -1,55 +1,69 @@
-# Verdict and note format
+# Score and note format
 
-## The verdict is binary: PASS or NOT PASS
+## The score is out of 10, and the bar is 8
 
-Both exercises returned the right data → **PASS**. Anything else → **NOT PASS**.
-There is no middle grade, no percentage and no "almost": these two exercises are
-deliberately easy, so someone who writes SQL at all clears them inside the five
-minutes, and someone who does not is not a borderline case.
+Every session starts at **10**. Each defect costs points. The floor is **1**.
+**8 or more clears the screener**; below 8 does not.
 
-Right means the data, not the SQL:
+Score only the **last result of each exercise**, and score the **data returned**,
+never the SQL style.
 
-- **Exercise 1** — the single number **6**.
-- **Exercise 2** — the **12 rows** of the Data area, the three requested
-  columns, most recent application first.
+| Defect | Cost |
+| --- | --- |
+| Right rows, wrong or missing sort in Exercise 2 (`ORDER BY` absent, or ascending when the statement asked for most recent first) | −0.5 |
+| Wrong data on one exercise — Ex 1 returning 40, 0 or one row per stage; Ex 2 returning a cartesian product, unfiltered rows, 0 rows, or the wrong grain | −3 |
+| An exercise never attempted, or nothing runnable written for it | −5 |
 
-Does **not** affect the verdict (these still PASS):
+Deductions land on half points. Do not invent costs that are not in this table,
+and do not soften one because the candidate seemed capable.
+
+### What costs nothing
+
+Mention it in the note if it is worth mentioning, but do not deduct:
 
 - keyword casing, indentation, aliases, `SELECT *`-style sloppiness;
-- failed attempts and error messages along the way — only the last result of
-  each exercise counts;
-- a clumsy but correct path: `GROUP BY stage HAVING stage = 'hired'` that ends
-  up returning 6, a subquery instead of a join, a comma join with the condition
-  in `WHERE`, `LEFT JOIN`, `LIKE 'Data'`;
 - extra columns beyond the three asked for, as long as the rows and their order
-  are right. This is the only tolerance — mention it in the note.
+  are right;
+- a clumsy path that lands on the right data: `GROUP BY stage HAVING stage =
+  'hired'` that returns 6, a subquery instead of a join, a comma join with the
+  condition in `WHERE`, `LEFT JOIN`, `LIKE 'Data'`;
+- failed attempts and error messages along the way — including a case slip the
+  candidate diagnosed and fixed themselves. Debugging your own error is the
+  behaviour this screener most wants to see, not a defect.
 
-NOT PASS, no matter how good the SQL looked:
+Right, for the record: **6** in Exercise 1; the **12 rows** of the Data area in
+Exercise 2, the three requested columns, most recent first.
 
-- a wrong number in Exercise 1 (40 is the usual one — see the answer key);
-- a wrong row set in Exercise 2: cartesian product, no `Data` filter, empty
-  result from a case mismatch;
-- the right rows in the wrong order, or unsorted — the statement asks for the
-  order;
-- only one of the two solved, or time ran out with an exercise unfinished;
-- nothing runnable was written.
+### What the scale looks like in practice
 
-**A NOT PASS does not advance to the technical interview.** If the recruiter
-thinks the circumstances warrant an exception (a broken connection, an obvious
-language barrier, a candidate who has never touched SQL but is being considered
-for something else), they say so to the hiring lead — that is a human decision,
-not a different verdict.
+| Session | Score | |
+| --- | --- | --- |
+| Both exercises right | 10 | above the bar |
+| Right data, but Exercise 2 was never sorted | 9.5 | above the bar |
+| Exercise 1 right, Exercise 2 a cartesian product | 7 | below |
+| Exercise 1 returned 40, Exercise 2 right but unsorted | 6.5 | below |
+| Time ran out with Exercise 2 untouched | 5 | below |
+| Both exercises returned the wrong data | 4 | below |
+
+The scale is deliberately sparse — two five-minute exercises cannot support
+finer gradations, and nothing lands at 8 or 8.5. What the number buys is the
+difference between *missed a detail* and *cannot write a join*, which a single
+verdict word could not carry.
+
+**Below 8 does not advance to the technical interview.** The score is what a
+human reads if they want to argue the case; there is no separate conversation to
+open, and no different number to negotiate.
 
 ## Time
 
 The whole thing is **5 minutes**, explanation included. At five minutes the
 recruiter stops the exercise wherever it is. A candidate still fighting
-Exercise 1 at three minutes is already a NOT PASS in practice; let them finish
-the attempt anyway, it costs nothing and it is fairer.
+Exercise 1 at three minutes is not going to clear the bar; let them finish the
+attempt anyway, it costs nothing and it is fairer.
 
 Record the total time and the per-exercise time from the transcript. Someone who
-passes in 90 seconds and someone who passes at 4:50 are both a PASS — the time
-is context for the technical interviewer, never part of the verdict.
+scores 10 in 90 seconds and someone who scores 10 at 4:50 both scored 10 — time
+is context for the technical interviewer, never part of the score.
 
 ## Note format
 
@@ -57,11 +71,12 @@ Short. It goes into Manatal as it is.
 
 ```
 SQL screener — <Candidate name> — <date>
-Result: PASS | NOT PASS
+Score: <n> / 10 — above the bar (8) | below the bar (8)
 Time: <mm:ss> total (Exercise 1 <mm:ss>, Exercise 2 <mm:ss>)
 
 Exercise 1 (count with a filter): OK / not OK — <one line, plain language>
 Exercise 2 (join two tables, filter by text, sort): OK / not OK — <one line>
+What cost points: <one plain line per deduction, or "nothing" on a 10>
 
 Their queries
 Ex 1: <verbatim SQL>
@@ -70,13 +85,19 @@ Ex 2: <verbatim SQL>
 Flag: <only if something warrants it — otherwise leave this line out>
 ```
 
-Plain language in those two lines, no SQL vocabulary the recruiter cannot
-defend in a conversation: "joined the two tables but never filtered by area, so
-it returned all 40 candidates" — not "missing predicate on the dimension".
+The outcome is a plain lowercase clause with the bar printed next to it, so
+anyone reading the record can act on it without judging SQL and without a word
+in capitals deciding for them.
+
+`What cost points` is what makes a 9.5 legible as different from a 7. One line
+per deduction, in plain language a recruiter can defend in a conversation:
+"joined the two tables but never filtered by area, so it returned all 40
+candidates" — not "missing predicate on the dimension". On a 10, write
+`nothing`.
 
 Quote their SQL verbatim and nowhere else. Never rewrite it, never correct it
-silently, never add the right answer to the note — the note travels, and the
-answer key does not.
+silently, and never put the right answer in the note — the note travels, and the
+answer key does not. Name the defect, never the correction.
 
 ## Flags worth raising (and how)
 
@@ -89,10 +110,11 @@ transcript shows it:
   (usually: ran out of time);
 - the candidate said they had never used SQL;
 - the session was dictated over screen share because the link would not open —
-  then typing and typos are not theirs.
+  then typing and typos are not theirs;
+- the transcript had to be pasted by hand because it did not arrive by itself.
 
 ## After the note
 
-Paste it into the candidate's record in Manatal. On a PASS, pass the raw
+Paste it into the candidate's record in Manatal. At 8 or above, pass the raw
 transcript along with it to the technical interviewer — they want the original
 queries, not the summary.

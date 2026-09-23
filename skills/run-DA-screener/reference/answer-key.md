@@ -45,12 +45,12 @@ right — mention the clumsiness in the note, do not fail it).
 
 Diagnostic wrong results:
 
-| Result | What they wrote | How to read it |
-| --- | --- | --- |
-| `40` | `HAVING stage = 'hired'` with no `GROUP BY`, or no filter at all | The HAVING/WHERE confusion. SQLite does not error here — it silently ignores the condition, so they may believe they are right. The strongest signal to capture. |
-| 6 rows, one per stage | `GROUP BY stage` with no filter | Knows aggregation, did not read "in hired stage". Partial credit. |
-| `0` | `stage = 'Hired'` or `'HIRED'` | Case. Small slip; note whether they debugged it themselves. |
-| error `no such column` | typo, or quoting `hired` with double quotes (`"hired"` is an identifier in SQLite) | Normal; what matters is whether they read the error and fixed it. |
+| Result | What they wrote | How to read it | Cost |
+| --- | --- | --- | --- |
+| `40` | `HAVING stage = 'hired'` with no `GROUP BY`, or no filter at all | The HAVING/WHERE confusion. SQLite does not error here — it silently ignores the condition, so they may believe they are right. The strongest signal to capture. | −3 |
+| 6 rows, one per stage | `GROUP BY stage` with no filter | Knows aggregation, did not read "in hired stage". | −3 |
+| `0` | `stage = 'Hired'` or `'HIRED'` | Case. Small slip, but the number is wrong. | −3 |
+| error `no such column` | typo, or quoting `hired` with double quotes (`"hired"` is an identifier in SQLite) | Normal; what matters is whether they read the error and fixed it. | 0 if they fixed it — otherwise the last result is what costs |
 
 ## Exercise 2 — join + string filter + sort
 
@@ -94,24 +94,29 @@ the three asked for (note it as sloppiness, not an error).
 
 Diagnostic wrong results:
 
-| Result | What they wrote | How to read it |
-| --- | --- | --- |
-| 120 or 320 rows | comma join with no join condition, or `CROSS JOIN` | Cartesian product. The most serious miss on this exercise — they do not have the join model. |
-| 40 rows | joined but never filtered | Did not apply the `Data` filter. |
-| 0 rows | `area = 'data'` / `'DATA'`, or filtered on `title = 'Data'` | Case, or filtered the wrong column. Watch whether they diagnose it. |
-| 12 rows, oldest first | `ORDER BY applied_date` (no `DESC`) | Read the sort direction wrong. Minor if they catch it. |
-| 12 rows, unsorted | no `ORDER BY` | Ignored the last line of the statement. Minor. |
-| error `a GROUP BY clause is required before HAVING` | filtered with `HAVING` | The confusion this screener is built to surface. Record it verbatim. |
-| 3 rows / opening-level rows | grouped by opening | Misread the grain of the question. |
+| Result | What they wrote | How to read it | Cost |
+| --- | --- | --- | --- |
+| 120 or 320 rows | comma join with no join condition, or `CROSS JOIN` | Cartesian product. The most serious miss on this exercise — they do not have the join model. | −3 |
+| 40 rows | joined but never filtered | Did not apply the `Data` filter. | −3 |
+| 0 rows | `area = 'data'` / `'DATA'`, or filtered on `title = 'Data'` | Case, or filtered the wrong column. Watch whether they diagnose it. | −3 |
+| 12 rows, oldest first | `ORDER BY applied_date` (no `DESC`) | Read the sort direction wrong. The rows are right. | −0.5 |
+| 12 rows, unsorted | no `ORDER BY` | Ignored the last line of the statement. The rows are right. | −0.5 |
+| error `a GROUP BY clause is required before HAVING` | filtered with `HAVING` | The confusion this screener is built to surface. Record it verbatim. | 0 if they fixed it — otherwise the last result is what costs |
+| 3 rows / opening-level rows | grouped by opening | Misread the grain of the question. | −3 |
 
-## Turning this into the verdict
+## Turning this into the score
 
 The screener tests whether someone can write a filter and a join at all, not
-whether they write elegant SQL. Right data with a clumsy path is a PASS; the
-wrong data with beautiful syntax is not. Style, aliasing and readability are
-colour for the note, never a reason to fail someone — and never a reason to
-pass someone whose numbers are wrong.
+whether they write elegant SQL. Right data by a clumsy path scores full marks;
+wrong data with beautiful syntax does not. Style, aliasing and readability are
+colour for the note, never a reason to take points off — and never a reason to
+give them back to someone whose numbers are wrong.
 
 Only the **last result of each exercise** counts. The attempts before it are
-what the note describes, not what it judges. `reference/screener-note.md` has
-the exact PASS / NOT PASS line and the note format.
+what the note describes, not what it scores: the `Cost` columns above apply to
+where the candidate ended up, not to every wrong turn on the way. A candidate
+who returned 40, saw it, and fixed it to 6 scored on the 6.
+
+Start at 10, subtract the costs above, and the bar is 8 — so a detail slip still
+clears and a wrong result does not. `reference/screener-note.md` has the full
+rubric, the sanity checks and the note format.

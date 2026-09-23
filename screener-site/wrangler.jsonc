@@ -1,12 +1,23 @@
 {
-  // Static hosting for the recruiter SQL screener. No server code: the whole
-  // app is public/index.html plus the SQLite engine in public/vendor/.
-  //   deploy:  cd screener-site && npx wrangler deploy
+  // The recruiter SQL screener. The app itself is public/index.html plus the
+  // SQLite engine in public/vendor/, served as static assets; src/index.js adds
+  // the two /s/<id> routes that receive a finished transcript and hand it back.
+  //   create the store, once:  npx wrangler kv namespace create SESSIONS
+  //   deploy:                  cd screener-site && npx wrangler deploy
   "name": "qubika-sql-screener",
   "compatibility_date": "2026-09-21",
+  "main": "src/index.js",
   "assets": {
-    "directory": "./public"
+    "directory": "./public",
+    "binding": "ASSETS"
   },
+  "kv_namespaces": [
+    {
+      // Finished transcripts, keyed by session id, expiring after 30 days.
+      "binding": "SESSIONS",
+      "id": "8bd1b7dd56e74bb09766891f065384b7"
+    }
+  ],
   "observability": {
     "enabled": true
   }

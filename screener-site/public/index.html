@@ -129,7 +129,7 @@ th{position:sticky;top:0;background:var(--panel);font-weight:600}
 .modal-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .modal-actions button{border-radius:8px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer}
 #copy,#confirm-finish{background:var(--blue);color:#fff;border:none}
-#close,#cancel-finish{background:var(--card);color:var(--muted);border:1px solid var(--line)}
+#close,#cancel-finish,#done-close{background:var(--card);color:var(--muted);border:1px solid var(--line)}
 #copied{color:var(--green);font-size:13px}
 #over{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;
   z-index:20;padding:16px}
@@ -149,7 +149,7 @@ th{position:sticky;top:0;background:var(--panel);font-weight:600}
   <div class="spacer"></div>
   <span id="clock" class="hint" title="Time since you opened this page">00:00</span>
   <input id="who" placeholder="Your full name" autocomplete="off">
-  <button id="finish">Finish &amp; copy session</button>
+  <button id="finish">Finish</button>
 </header>
 <main>
   <section>
@@ -180,17 +180,26 @@ th{position:sticky;top:0;background:var(--panel);font-weight:600}
   <div class="box">
     <div class="pane" id="pane-confirm">
       <h2>Finish the exercise?</h2>
-      <p>This closes the exercises: after this you cannot run any more queries.
-        The text to send to the interviewer comes next.</p>
+      <p>This closes the exercises: after this you cannot run any more queries,
+        and your session goes to the interviewer.</p>
       <div class="modal-actions">
         <button id="confirm-finish">Yes, finish</button>
         <button id="cancel-finish">Not yet</button>
       </div>
     </div>
+    <div class="pane" id="pane-done" hidden>
+      <h2 id="done-title">Finishing…</h2>
+      <p id="done-text">Sending your session to the interviewer.</p>
+      <div class="modal-actions">
+        <button id="done-close" hidden>Close</button>
+      </div>
+    </div>
     <div class="pane" id="pane-send" hidden>
       <h2>Send your session to the interviewer</h2>
-      <p>Copy the text below and paste it in the meeting chat. It contains the
-        queries you ran — nothing else. The exercises are now closed.</p>
+      <p>Your session could not be sent automatically, so it has to go the
+        manual way: copy the text below and paste it in the meeting chat. It
+        contains the queries you ran — nothing else. The exercises are now
+        closed.</p>
       <textarea id="transcript" spellcheck="false" readonly></textarea>
       <div class="modal-actions">
         <button id="copy">Copy to clipboard</button>
@@ -204,8 +213,7 @@ th{position:sticky;top:0;background:var(--panel);font-weight:600}
 <div id="over" hidden>
   <div class="box">
     <h2 id="over-title">Session ended</h2>
-    <p id="over-text">Thanks — send the copied text to the interviewer in the
-      meeting chat if you have not already.</p>
+    <p id="over-text">Thanks — there is nothing else to do on this page.</p>
     <div class="modal-actions"><button id="reshow">Show my session text again</button></div>
   </div>
 </div>
@@ -334,8 +342,13 @@ Sort the result by application date, most recent first.`
 
 // ------------------------------------------------------------------ state ---
 let db = null, current = null, running = false, finished = false;
+let submitted = false;
 let clockTimer = null, expiryTimer = null, savedTranscript = "", skew = 0;
-const LOCK_KEY = "qubika-sql-screener-ended:" + (SESSION.id || "shared");
+// Computed on use, never at load: SESSION is only filled in once boot() has
+// parsed the link, so reading it here would key every candidate who ever uses
+// this browser to one shared lock — and the first finished session would then
+// close the page for all the ones after it.
+const lockKey = () => "qubika-sql-screener-ended:" + (SESSION.id || "shared");
 const LOCK_TTL_MS = 90 * 60 * 1000;   // a stale lock never blocks the next session
 const state = {};       // exercise -> {text, resultHtml, statusHtml, statusClass}
 const log = [];         // {ex, at, sql, ok, summary, error, ms}
@@ -391,7 +404,8 @@ async function boot(){
               practice: link.practice };
 
   const locked = readLock();
-  if (locked){ savedTranscript = locked.text || ""; showEnded("finished"); return; }
+  if (locked){ savedTranscript = locked.text || "";
+               submitted = !!locked.sent; showEnded("finished"); return; }
   clockTimer = setInterval(tickClock, 1000);
   expiryTimer = setTimeout(expire, Math.max(0, SESSION.exp - now()));
   if (SESSION.candidate){
@@ -687,6 +701,24 @@ function transcript(){
 
 function tickClock(){ $("clock").textContent = hhmmss(Date.now() - startedAt); }
 
+// The only thing that ever leaves the browser, and only once the session is
+// closed: the finished transcript, so the interviewer never has to ask the
+// candidate for it. Sessions whose id was not minted for retrieval (a practice
+// link, a link written without one) simply fall back to the copy box.
+async function submit(text){
+  if (!SESSION.id || !/^[a-z0-9]{16,64}$/.test(SESSION.id)) return false;
+  try {
+    const r = await fetch("/s/" + SESSION.id, {
+      method: "POST",
+      headers: { "content-type": "text/plain; charset=utf-8" },
+      body: text,
+    });
+    // 409 is "already stored" — from here that is a success, the interviewer
+    // has the evidence either way.
+    return r.ok || r.status === 409;
+  } catch (e){ return false; }
+}
+
 // The session is one-shot: finishing closes the exercises in this browser and
 // survives a reload, so nobody keeps working after sending their answers. The
 // lock expires by itself, and the interviewer can clear it for the next
@@ -694,20 +726,19 @@ function tickClock(){ $("clock").textContent = hhmmss(Date.now() - startedAt); }
 function readLock(){
   if (SESSION.practice) return null;
   try {
-    const raw = JSON.parse(localStorage.getItem(LOCK_KEY) || "null");
+    const raw = JSON.parse(localStorage.getItem(lockKey()) || "null");
     if (raw && Date.now() - (raw.at || 0) < LOCK_TTL_MS) return raw;
-    localStorage.removeItem(LOCK_KEY);
+    localStorage.removeItem(lockKey());
   } catch (e){}
   return null;
 }
 
 const ENDINGS = {
   finished: ["Session ended",
-    "Thanks — send the copied text to the interviewer in the meeting chat if " +
-    "you have not already. There is nothing else to do on this page."],
+    "Thanks — your session has gone to the interviewer. There is nothing " +
+    "else to do on this page."],
   expired: ["Time is up",
-    "This session has closed. If you still have your session text to send, " +
-    "use the button below."],
+    "This session has closed and has gone to the interviewer as it stands."],
   "no-link": ["This link is not valid any more",
     "Ask the interviewer to send you a new one."]
 };
@@ -715,21 +746,41 @@ const ENDINGS = {
 function showEnded(kind){
   const [title, text] = ENDINGS[kind] || ENDINGS["no-link"];
   $("over-title").textContent = title;
-  $("over-text").textContent = text;
+  // A session that could not be sent is the one case where the candidate still
+  // has something to do — never tell them they are done when they are not.
+  // Not gated on `finished`: a reload lands here with the session restored from
+  // the lock, and that is exactly when they come back looking for their text.
+  // A practice link has nothing to send and nobody waiting for it, so it is
+  // never stranded — a rehearsal should show the interviewer the normal flow.
+  const stranded = savedTranscript && !submitted && !SESSION.practice;
+  $("over-text").textContent =
+    stranded
+      ? "Your session could not be sent automatically. Use the button below and "
+        + "paste the text in the meeting chat."
+      : (SESSION.practice && !submitted)
+        ? "Practice run — nothing was sent."
+        : text;
   $("over").hidden = false;
-  $("reshow").hidden = !savedTranscript;
+  $("reshow").hidden = !stranded;
 }
 
 // The session closes the same way whether the candidate finished it or the
 // clock ran out: the text they can still send is built either way.
-function expire(){
+async function expire(){
   if (finished) return;
-  endSession();
   $("modal").hidden = true;
+  await endSession();
   showEnded("expired");
 }
 
-function endSession(){
+function lock(sent){
+  if (SESSION.practice) return;
+  try { localStorage.setItem(lockKey(),
+    JSON.stringify({ at: Date.now(), text: savedTranscript, sent })); } catch (e){}
+}
+
+async function endSession(){
+  if (finished) return submitted;
   finished = true;
   savedTranscript = transcript();
   clearInterval(clockTimer);
@@ -737,16 +788,19 @@ function endSession(){
   $("run").disabled = true;
   $("finish").disabled = true;
   $("editor").readOnly = true;
-  if (!SESSION.practice){
-    try { localStorage.setItem(LOCK_KEY,
-      JSON.stringify({ at: Date.now(), text: savedTranscript })); } catch (e){}
-  }
+  // Locked before the request, not after: a tab closed mid-send must not come
+  // back to a working exercise.
+  lock(false);
+  submitted = await submit(savedTranscript);
+  lock(submitted);
+  return submitted;
 }
 
 function openSend(){
   $("transcript").value = savedTranscript;
   $("copied").hidden = true;
   $("pane-confirm").hidden = true;
+  $("pane-done").hidden = true;
   $("pane-send").hidden = false;
   $("modal").hidden = false;
   $("transcript").focus();
@@ -760,7 +814,29 @@ $("finish").addEventListener("click", () => {
   $("confirm-finish").focus();
 });
 $("cancel-finish").addEventListener("click", () => { $("modal").hidden = true; });
-$("confirm-finish").addEventListener("click", () => { endSession(); openSend(); });
+$("confirm-finish").addEventListener("click", async () => {
+  $("pane-confirm").hidden = true;
+  $("pane-send").hidden = true;
+  $("pane-done").hidden = false;
+  $("done-close").hidden = true;
+  if (await endSession()){
+    $("done-title").textContent = "All set";
+    $("done-text").textContent = "Your session has gone to the interviewer. "
+      + "The exercises are now closed and there is nothing else to do.";
+    $("done-close").hidden = false;
+  } else if (SESSION.practice){
+    $("done-title").textContent = "Practice run";
+    $("done-text").textContent = "Nothing was sent — this was a rehearsal. "
+      + "The exercises are now closed.";
+    $("done-close").hidden = false;
+  } else {
+    openSend();
+  }
+});
+$("done-close").addEventListener("click", () => {
+  $("modal").hidden = true;
+  showEnded("finished");
+});
 $("close").addEventListener("click", () => {
   $("modal").hidden = true;
   if (finished) showEnded();

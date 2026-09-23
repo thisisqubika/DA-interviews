@@ -18,7 +18,7 @@ session is saved for later review.
 | Skill: `run-DA-livecoding` | Preflight + hands you the one-line command to start an interview in your terminal; also lists exercises, shows solutions, reads session logs, helps add exercises and troubleshoot. Invoke it as `/qubika-livecoding:run-DA-livecoding` or in natural language. The full app ships inside the skill (`skills/run-DA-livecoding/app/`). |
 | Skill: `prepare-DA-interview` | Pre-call prep from recruiter screening notes and/or a CV, against one or more job descriptions (pasted, or Jira tickets): must-have coverage table, gap questions, two ready-to-run interview scenarios, logistics and risk flags, and a DASRI/DASRII seniority pre-read. Invoke as `/qubika-livecoding:prepare-DA-interview` or "prep the interview for candidate X". |
 | Skill: `assess-DA-interview` | Post-call write-up from the interview transcript (a Tactiq link, a Google Doc, a local file) plus the live SQL session log: verdict, DASRI/DASRII seniority, client fit per opening, and eleven evidence-backed categories against the shared template. Invoke as `/qubika-livecoding:assess-DA-interview` or "process the interview for candidate X". |
-| Skill: `run-DA-screener` | The **recruiting team's** 5-minute SQL check, run during the screening call before anyone technical is involved. Two exercises on a different dataset, served from a static page (`screener-site/`) through a per-candidate link that expires by itself; the candidate pastes their session back and the skill writes the PASS / NOT PASS note for Manatal. No terminal, no install, nothing to stop — it is built to be used from the Claude app. Invoke as `/qubika-livecoding:run-DA-screener` or "run the SQL screener". |
+| Skill: `run-DA-screener` | The **recruiting team's** 5-minute SQL check, run during the screening call before anyone technical is involved. Two exercises on a different dataset, served from a static page (`screener-site/`) through a per-candidate link that expires by itself; the finished session comes back on its own and the skill scores it out of 10 as a note for Manatal. No terminal, no install, nothing to stop — it is built to be used from the Claude app. Invoke as `/qubika-livecoding:run-DA-screener` or "run the SQL screener". |
 | `standards/` | The team's shared source of truth for what a good assessment looks like: `interview_template.md` (the canonical structure), `assessment-lessons.md` (judgment rules distilled from real assessments), and `roles/` (the DASRI / DASRII career-path definitions both skills check evidence against). |
 | `workspace-template/` | Empty skeleton for your own interview workspace. Candidate files never live in this repo. |
 
@@ -157,39 +157,53 @@ Earlier in the funnel, before any of the above: the recruiter running the
 screening call asks *"run the SQL screener for Maria Clara"* (or
 `/qubika-livecoding:run-DA-screener`) and gets a link **written for that one
 candidate**, plus the words to say during the exercise. The candidate opens it,
-writes SQL in their own browser, and clicks **Finish & copy session** — which
-closes the exercises and hands them the text to paste back in the meeting chat.
-The recruiter pastes it into the chat and gets a **PASS or NOT PASS**, with the
-candidate's own queries quoted and the timings. No middle grades: the two
-exercises are easy enough that anyone who writes SQL clears them inside five
-minutes, explanation included.
+writes SQL in their own browser, and clicks **Finish** — which closes the
+exercises and sends the session back by itself. The recruiter says they are
+done, the skill fetches the transcript with the session id it minted, and out
+comes a **score out of 10** where **8 clears the bar**, with the candidate's own
+queries quoted, the timings, and a line naming exactly what cost points.
+
+The scale is deliberately coarse — a missing `ORDER BY` costs half a point, a
+cartesian product costs three — because the recruiting team must never be the
+one grading SQL. What the number buys over a bare verdict is the difference
+between *missed a detail* and *cannot write a join*, so nobody reads a note in
+capitals and drops a candidate who was half a point away.
 
 **One candidate, one link, and it expires.** The page is deployed once
-(`screener-site/`, a Cloudflare Worker serving static assets) and is always up
+(`screener-site/`, a Cloudflare Worker serving static assets plus two routes)
+and is always up
 at **https://qubika-sql-screener.screener-site.workers.dev**; what is
 per-candidate is the link, which carries their name and the moment it dies:
 
 ```
-https://qubika-sql-screener.screener-site.workers.dev/?c=Maria%20Clara%20Zordan&id=mcz-0922-1530&x=2026-09-22T18:15:00Z
+https://qubika-sql-screener.screener-site.workers.dev/?c=Maria%20Clara%20Zordan&id=k7m2pq9x4vb1nz8t9wc3&x=2026-09-22T18:15:00Z
 ```
 
 Past `x` the page refuses to open, and a session still running when the clock
-hits it closes itself — with the transcript still copyable, so time running out
+hits it closes itself — sending the transcript as it stands, so time running out
 never costs the evidence. Expiry is checked against the **host's** clock (the
 `Date` response header), not the candidate's device, so winding the laptop back
-does not reopen a session. Nothing is published, shared or deleted per session;
-two recruiters screening two candidates at once is just two links. The trade for
-having no server: a live link cannot be revoked before its expiry — keep the
-window at 45 minutes, and redeploy at a different path in the rare case a link
-has to die early.
+does not reopen a session. Nothing is published or deleted per session; two
+recruiters screening two candidates at once is just two links. A live link still
+cannot be revoked before its expiry — keep the window at 45 minutes, and
+redeploy at a different path in the rare case a link has to die early.
+
+`id` is the session id, and it has to be **random**: the finished transcript is
+stored at `/s/<id>` in Cloudflare KV for 30 days, and since the skill fetches it
+as a plain URL there is no auth header to add. The id is the whole access
+control, which is why it is twenty random characters and not the candidate's
+initials.
 
 It is deliberately the opposite of `run-DA-livecoding` in how it runs: no
 Python, no terminal, no tunnel, no process to stop.
 `screener-site/public/index.html` is the whole app — statements, seed data,
 editor and SQLite (sql.js) compiled to WebAssembly in `public/vendor/`, served
-from the site itself so a blocked CDN cannot take an interview down. Redeploy
-with `cd screener-site && npx wrangler deploy`; `screener-site/README.md`
-covers the link format and what a host has to get right.
+from the site itself so a blocked CDN cannot take an interview down; all the SQL
+runs in the candidate's browser and the only thing that ever leaves it is the
+finished transcript. `src/index.js` is the Worker behind that, and it is the
+whole of the server side. Redeploy with `cd screener-site && npx wrangler
+deploy`; `screener-site/README.md` covers the link format, the two routes and
+what a host has to get right.
 
 Two exercises only — a count with a filter, and a join between two tables
 filtered by a **text** value (`area = 'Data'`), never a number. That change is
@@ -201,8 +215,8 @@ technical interview's, so passing the screener does not preview that session.
 
 Interviewer-only material lives in `skills/run-DA-screener/reference/`:
 `answer-key.md` (both solutions, the exact expected results, and what each
-wrong result means) and `screener-note.md` (the PASS / NOT PASS rule and the
-note format). The page itself contains no solutions — candidates can read its
+wrong result means) and `screener-note.md` (the scoring rubric, what each defect
+costs, and the note format). The page itself contains no solutions — candidates can read its
 source.
 
 **Installing it for a recruiter (Claude app).** Recruiters do not need this
