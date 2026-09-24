@@ -101,17 +101,30 @@ answer key does not. Name the defect, never the correction.
 
 ## Flags worth raising (and how)
 
-State the observation, not the accusation. One line each, and only when the
-transcript shows it:
+A flag records a fact about how the session ran, so the technical interviewer
+knows how to read the note. It is never a theory about the candidate. One line
+each, plain and literal, and only when the transcript shows it:
 
-- a first query that arrives perfect after a long silence, formatted unlike
-  anything else they typed;
 - no queries run at all for an exercise, with something left in the editor
   (usually: ran out of time);
 - the candidate said they had never used SQL;
 - the session was dictated over screen share because the link would not open —
   then typing and typos are not theirs;
 - the transcript had to be pasted by hand because it did not arrive by itself.
+
+Nothing else goes on that line. In particular:
+
+- never compare this session with another candidate's, from today or any other
+  day, and never mention that two queries look alike;
+- never comment on where a query might have come from, how fast it arrived,
+  how it is formatted, or what the pauses between queries might mean;
+- never write a flag that the recruiter could not read out loud to the
+  candidate as a plain statement of fact.
+
+If something in the transcript looks odd to you, the transcript itself is what
+travels: pass it to the technical interviewer and let them read it. Suspicion
+written into a record follows a person around, and this screener is not the
+place where it gets decided.
 
 ## After the note
 

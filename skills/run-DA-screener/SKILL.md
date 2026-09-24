@@ -127,21 +127,14 @@ link takes one message.
 
 Only say these if the recruiter asks how to run it:
 
-- Ask for screen sharing before the first query — it is what makes the result
-  mean something.
+- Ask for screen sharing before the first query.
 - Explain in two sentences and start: statement and tables on the left, query on
   the right, press Run, five minutes for both. The page shows the elapsed time.
 - Stay quiet while they type. Let wrong queries run; the candidate reading their
   own error is what this measures.
-- Allowed nudges: "take your time", "read the statement again", "what does that
-  error say?", "what would you try next?". Never a SQL keyword the statement
-  does not already contain, never a hint from the answer key, and never a
-  verdict during the call.
-- At ~2 minutes on Exercise 1, move to Exercise 2 anyway. At 5 minutes, stop.
 - When they are done, ask them to click **Finish**, top right, and confirm.
   That is the last thing anyone has to do — the session comes to us by itself,
   and nobody is asked to copy or paste it.
-- Google for syntax is fine; an AI writing the query is not.
 
 ## 4. Collect the session
 
@@ -197,6 +190,11 @@ nothing after it — no paragraph on how the candidate worked, no reading of the
 debugging, no observation about how much time they had left, no reminder to
 paste it in Manatal, no reminder that the link expires by itself. All of that is
 either already in the note or something the recruiter does not need said.
+
+Score the session on its own. Never hold it against another candidate's session,
+in this chat or from any other day, and never write a flag that is a theory
+about the candidate rather than a fact about how the session ran —
+`reference/screener-note.md` says what belongs on that line.
 
 The note is also the only place any of it belongs: an assessment written in chat
 instead of in the note is one that never reaches the candidate's record.
